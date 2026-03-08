@@ -63,7 +63,7 @@
       display: flex;
       flex-direction: column;
       gap: 10px;
-      padding: 10px;
+      padding: max(10px, env(safe-area-inset-top)) max(10px, env(safe-area-inset-right)) max(10px, env(safe-area-inset-bottom)) max(10px, env(safe-area-inset-left));
     }
 
     canvas {
@@ -73,6 +73,7 @@
       aspect-ratio: 16 / 9;
       background: linear-gradient(160deg, #0f243a, #101e2f 40%, #102237);
       border-radius: 12px;
+      touch-action: none;
     }
 
     .hud {
@@ -328,10 +329,18 @@
 
     @media (max-width: 960px) {
       .shell { grid-template-columns: 1fr; }
-      .panel { order: -1; }
+      .panel { order: -1; padding: 10px; }
+      .tower-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        max-height: 42vh;
+        overflow: auto;
+      }
+      .tower-option { min-height: 44px; }
       .hud { flex-wrap: wrap; }
       .status-chip { max-width: 100%; margin-left: 0; text-align: left; }
       .under-canvas { grid-template-columns: 1fr; }
+      .actions .icon-btn { min-height: 44px; font-size: 20px; }
+      .stats-card { min-height: 44px; }
     }
   </style>
 </head>
@@ -1385,13 +1394,12 @@
       return true;
     }
 
-    canvas.addEventListener("click", (evt) => {
+    function handleCanvasPress(x, y) {
       if (state.gameOver) return;
       if (state.paused) {
         pauseBtn.click();
         return;
       }
-      const { x, y } = worldPos(evt);
       const gx = Math.round(x / grid) * grid;
       const gy = Math.round(y / grid) * grid;
 
@@ -1435,7 +1443,20 @@
         state.statsMode = "unit";
         updateButtons();
       }
+    }
+
+    canvas.addEventListener("click", (evt) => {
+      const { x, y } = worldPos(evt);
+      handleCanvasPress(x, y);
     });
+    canvas.addEventListener("touchstart", (evt) => {
+      evt.preventDefault();
+      if (!evt.touches.length) return;
+      const p = worldPos(evt.touches[0]);
+      mouse.x = p.x;
+      mouse.y = p.y;
+      handleCanvasPress(p.x, p.y);
+    }, { passive: false });
 
     canvas.addEventListener("contextmenu", (evt) => {
       evt.preventDefault();
@@ -2209,6 +2230,12 @@
       mouse.x = p.x;
       mouse.y = p.y;
     });
+    canvas.addEventListener("touchmove", (e) => {
+      if (!e.touches.length) return;
+      const p = worldPos(e.touches[0]);
+      mouse.x = p.x;
+      mouse.y = p.y;
+    }, { passive: true });
 
     canvas.addEventListener("mousedown", (e) => {
       if (!state.gameOver) return;

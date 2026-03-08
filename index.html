@@ -369,14 +369,14 @@
       <p class="group-title">Build Towers</p>
       <div class="tower-grid">
         <button data-build="dart" class="tower-option"><span class="tower-art dart"></span><span class="tower-copy"><strong>Dart Node ($50)</strong><span>rapid single-target</span></span></button>
-        <button data-build="scatter" class="tower-option"><span class="tower-art scatter"></span><span class="tower-copy"><strong>Scatter Bloom ($220)</strong><span>shoots 3 projectiles at once</span></span></button>
+        <button data-build="scatter" class="tower-option"><span class="tower-art scatter"></span><span class="tower-copy"><strong>Scatter Bloom ($220)</strong><span>shoots multiple projectiles at once</span></span></button>
         <button data-build="cannon" class="tower-option"><span class="tower-art cannon"></span><span class="tower-copy"><strong>Pulse Cannon ($350)</strong><span>splash blast</span></span></button>
         <button data-build="frost" class="tower-option"><span class="tower-art frost"></span><span class="tower-copy"><strong>Cryo Prism ($400)</strong><span>slows enemies</span></span></button>
         <button data-build="storm" class="tower-option"><span class="tower-art storm"></span><span class="tower-copy"><strong>Storm Arc ($500)</strong><span>long-range with light chain arcs</span></span></button>
         <button data-build="venom" class="tower-option"><span class="tower-art venom"></span><span class="tower-copy"><strong>Venom Spire ($420)</strong><span>poison over time</span></span></button>
         <button data-build="ion" class="tower-option"><span class="tower-art ion"></span><span class="tower-copy"><strong>Ion Lattice ($460)</strong><span>marked damage amplifier</span></span></button>
         <button data-build="ember" class="tower-option"><span class="tower-art ember"></span><span class="tower-copy"><strong>Ember Forge ($520)</strong><span>slow molten shots + burning field</span></span></button>
-        <button data-build="rail" class="tower-option"><span class="tower-art rail"></span><span class="tower-copy"><strong>Rail Lance ($560)</strong><span>burst shots pierce through 3 enemies</span></span></button>
+        <button data-build="rail" class="tower-option"><span class="tower-art rail"></span><span class="tower-copy"><strong>Rail Lance ($560)</strong><span>burst shots pierce through enemies</span></span></button>
         <button data-build="mortar" class="tower-option"><span class="tower-art mortar"></span><span class="tower-copy"><strong>Siege Mortar ($650)</strong><span>huge long-range area blast</span></span></button>
       </div>
 
@@ -456,8 +456,8 @@
         cost: 350,
         range: 160,
         fireRate: 1.12,
-        damage: 192,
-        splash: 36,
+        damage: 196,
+        splash: 38,
         color: "#ffb347",
         projectileSpeed: 560
       },
@@ -465,9 +465,9 @@
         name: "Cryo Prism",
         cost: 400,
         range: 156,
-        fireRate: 0.72,
+        fireRate: 0.76,
         damage: 18,
-        slow: 0.86,
+        slow: 0.85,
         slowTime: 1.0,
         color: "#a6b9ff",
         projectileSpeed: 520
@@ -488,7 +488,7 @@
         cost: 800,
         range: 196,
         fireRate: 0.3,
-        damage: 78,
+        damage: 75,
         poisonDps: 190,
         poisonTime: 4.2,
         color: "#87ff94",
@@ -507,7 +507,7 @@
         burningRadius: 62,
         dotLabel: "Burning",
         color: "#ff8f50",
-        projectileSpeed: 375
+        projectileSpeed: 395
       },
       storm: {
         name: "Storm Arc",
@@ -524,12 +524,12 @@
       mortar: {
         name: "Siege Mortar",
         cost: 6000,
-        range: 276,
-        fireRate: 1.85,
-        damage: 980,
-        splash: 128,
+        range: 286,
+        fireRate: 1.95,
+        damage: 990,
+        splash: 108,
         color: "#dbc8a5",
-        projectileSpeed: 560
+        projectileSpeed: 580
       },
       ion: {
         name: "Ion Lattice",
@@ -1692,7 +1692,7 @@
       for (const t of state.towers) {
         ctx.save();
         if (t === state.selectedTower) {
-          ctx.strokeStyle = "rgba(176, 180, 235, 0.9)";
+          ctx.strokeStyle = "rgba(176, 180, 235, 0.65)";
           ctx.lineWidth = 2;
           ctx.beginPath();
           ctx.arc(t.x, t.y, t.range, 0, Math.PI * 2);

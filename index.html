@@ -80,7 +80,6 @@
       gap: 8px;
       flex-wrap: nowrap;
       align-items: center;
-      pointer-events: none;
     }
 
     .chip {
@@ -105,6 +104,16 @@
       text-overflow: ellipsis;
       color: #cde1ff;
       font-size: 12px;
+      transition: opacity 260ms ease;
+    }
+
+    .pause-chip {
+      border-radius: 999px;
+      min-width: 38px;
+      padding: 6px 10px;
+      text-align: center;
+      font-size: 16px;
+      line-height: 1;
     }
 
     .panel {
@@ -158,6 +167,12 @@
       opacity: 0.45;
       cursor: not-allowed;
       border-color: rgba(149, 194, 255, 0.2);
+    }
+
+    .tower-option.inactive:hover {
+      transform: none;
+      border-color: rgba(149, 194, 255, 0.2);
+      box-shadow: none;
     }
 
     .tower-art {
@@ -282,15 +297,11 @@
       font-size: 11px;
       line-height: 1.28;
       color: #c9dbf5;
-      min-height: 34px;
+      min-height: 45px;
     }
 
     .upgrade-preview {
       color: #ffb765;
-    }
-
-    .stats-inline {
-      margin-top: 8px;
     }
 
     .under-canvas {
@@ -303,6 +314,7 @@
 
     .canvas-actions {
       margin-top: 0;
+      min-height: 45px;
     }
 
     .pulse {
@@ -337,10 +349,11 @@
         <div class="chip">Wave <strong id="wave">0</strong></div>
         <div class="chip">Score <strong id="score">0</strong></div>
         <div id="statusText" class="chip status-chip"></div>
+        <button id="pause" class="pause-chip" title="Pause (P)">⏸</button>
       </div>
       <canvas id="game" width="960" height="560"></canvas>
       <div class="under-canvas">
-        <div id="selectionStats" class="stats-card stats-inline"></div>
+        <div id="selectionStats" class="stats-card"></div>
         <div class="canvas-actions">
           <div class="button-row actions">
             <button id="startWave" class="primary icon-btn" title="Call Wave (Space)">▶</button>
@@ -359,16 +372,16 @@
         <button data-build="scatter" class="tower-option"><span class="tower-art scatter"></span><span class="tower-copy"><strong>Scatter Bloom ($220)</strong><span>shoots 3 projectiles at once</span></span></button>
         <button data-build="cannon" class="tower-option"><span class="tower-art cannon"></span><span class="tower-copy"><strong>Pulse Cannon ($350)</strong><span>splash blast</span></span></button>
         <button data-build="frost" class="tower-option"><span class="tower-art frost"></span><span class="tower-copy"><strong>Cryo Prism ($400)</strong><span>slows enemies</span></span></button>
-        <button data-build="storm" class="tower-option"><span class="tower-art storm"></span><span class="tower-copy"><strong>Storm Arc ($500)</strong><span>rapid long-range with light chain arcs</span></span></button>
+        <button data-build="storm" class="tower-option"><span class="tower-art storm"></span><span class="tower-copy"><strong>Storm Arc ($500)</strong><span>long-range with light chain arcs</span></span></button>
         <button data-build="venom" class="tower-option"><span class="tower-art venom"></span><span class="tower-copy"><strong>Venom Spire ($420)</strong><span>poison over time</span></span></button>
         <button data-build="ion" class="tower-option"><span class="tower-art ion"></span><span class="tower-copy"><strong>Ion Lattice ($460)</strong><span>marked damage amplifier</span></span></button>
         <button data-build="ember" class="tower-option"><span class="tower-art ember"></span><span class="tower-copy"><strong>Ember Forge ($520)</strong><span>slow molten shots + burning field</span></span></button>
-        <button data-build="rail" class="tower-option"><span class="tower-art rail"></span><span class="tower-copy"><strong>Rail Lance ($560)</strong><span>heavy shots + impact burst damage</span></span></button>
+        <button data-build="rail" class="tower-option"><span class="tower-art rail"></span><span class="tower-copy"><strong>Rail Lance ($560)</strong><span>burst shots pierce through 3 enemies</span></span></button>
         <button data-build="mortar" class="tower-option"><span class="tower-art mortar"></span><span class="tower-copy"><strong>Siege Mortar ($650)</strong><span>huge long-range area blast</span></span></button>
       </div>
 
       <p class="tip">
-        Build on highlighted pads only. Select a tower and press ⇧ to upgrade. Waves auto-start on a timer, but ▶ can call early.
+        Build on highlighted pads only. Select a tower and press ⇧ to upgrade. Waves auto-start on a timer, but ▶ can call early. Armor reduces incoming hit damage, and special attacks add effects like mark amp, chain, burn fields, and armor shred.
       </p>
     </aside>
   </main>
@@ -384,12 +397,18 @@
     };
 
     const towerButtons = Array.from(document.querySelectorAll("[data-build]"));
+    const towerHotkeys = [
+      ["1", "q"], ["2", "w"], ["3", "e"], ["4", "r"], ["5", "a"],
+      ["6", "s"], ["7", "d"], ["8", "f"], ["9", "z"], ["0", "x"]
+    ];
     const startWaveBtn = document.getElementById("startWave");
+    const pauseBtn = document.getElementById("pause");
     const meteorBtn = document.getElementById("meteor");
     const upgradeBtn = document.getElementById("upgrade");
     const sellBtn = document.getElementById("sell");
     const selectionStats = document.getElementById("selectionStats");
     const statusText = document.getElementById("statusText");
+    let lastStatusMessage = "";
 
     const W = canvas.width;
     const H = canvas.height;
@@ -436,8 +455,8 @@
         name: "Pulse Cannon",
         cost: 350,
         range: 160,
-        fireRate: 1.02,
-        damage: 92,
+        fireRate: 1.12,
+        damage: 192,
         splash: 36,
         color: "#ffb347",
         projectileSpeed: 560
@@ -445,7 +464,7 @@
       frost: {
         name: "Cryo Prism",
         cost: 400,
-        range: 146,
+        range: 156,
         fireRate: 0.72,
         damage: 18,
         slow: 0.86,
@@ -455,13 +474,12 @@
       },
       rail: {
         name: "Rail Lance",
-        cost: 1500,
+        cost: 3200,
         range: 315,
         fireRate: 0.6,
         damage: 940,
         burstCycle: 3,
-        burstRadius: 84,
-        burstDamage: 360,
+        burstPierce: 3,
         color: "#ff7e7e",
         projectileSpeed: 1100
       },
@@ -478,36 +496,37 @@
       },
       ember: {
         name: "Ember Forge",
-        cost: 1200,
+        cost: 2200,
         range: 196,
-        fireRate: 1.08,
+        fireRate: 1.28,
         damage: 132,
-        burningCycle: 2,
-        burningDps: 164,
-        burningTime: 2.6,
-        burningRadius: 34,
+        armorShred: 0.01,
+        burningCycle: 3,
+        burningDps: 250,
+        burningTime: 3.6,
+        burningRadius: 76,
         dotLabel: "Burning",
         color: "#ff8f50",
-        projectileSpeed: 340
+        projectileSpeed: 350
       },
       storm: {
         name: "Storm Arc",
         cost: 500,
         range: 202,
-        fireRate: 0.92,
-        damage: 210,
+        fireRate: 0.72,
+        damage: 250,
         chainTargets: 2,
         chainRange: 108,
-        chainDamageFalloff: 0.5,
+        chainDamageFalloff: 0.75,
         color: "#7dd9ff",
         projectileSpeed: 760
       },
       mortar: {
         name: "Siege Mortar",
-        cost: 3000,
+        cost: 6000,
         range: 276,
-        fireRate: 1.16,
-        damage: 560,
+        fireRate: 1.85,
+        damage: 980,
         splash: 128,
         color: "#dbc8a5",
         projectileSpeed: 560
@@ -526,8 +545,8 @@
       scatter: {
         name: "Scatter Bloom",
         cost: 220,
-        range: 145,
-        fireRate: 0.13,
+        range: 140,
+        fireRate: 0.12,
         damage: 16,
         pellets: 3,
         spread: 0.18,
@@ -543,6 +562,9 @@
         if (!t) return;
         const title = btn.querySelector("strong");
         if (title) title.textContent = `${t.name} ($${t.cost})`;
+        const i = towerButtons.indexOf(btn);
+        const keys = towerHotkeys[i] || [];
+        btn.title = keys.length ? `${t.name} [${keys.join("/")}]` : t.name;
       });
     }
 
@@ -574,6 +596,8 @@
         clearedWave: 0,
         meteorReadyAt: 0,
         aimingMeteor: false,
+        paused: false,
+        messageAt: Date.now(),
         gameOver: false,
         message: "Set up quickly. First wave auto-starts in 35s."
       };
@@ -592,21 +616,24 @@
       towerButtons.forEach((btn) => {
         const type = btn.dataset.build;
         btn.classList.toggle("active", state.selectedBuild === type);
-        btn.disabled = !state.gameOver && state.gold < towerTypes[type].cost;
+        btn.disabled = state.paused || (!state.gameOver && state.gold < towerTypes[type].cost);
         btn.classList.toggle("inactive", state.gameOver);
       });
-      sellBtn.disabled = !state.selectedTower || state.gameOver;
+      sellBtn.disabled = state.paused || !state.selectedTower || state.gameOver;
       const upgradeCostNow = state.selectedTower ? getUpgradeCost(state.selectedTower) : Infinity;
-      upgradeBtn.disabled = !state.selectedTower || state.gameOver || state.gold < upgradeCostNow;
-      startWaveBtn.disabled = state.waveInProgress || state.gameOver;
+      upgradeBtn.disabled = state.paused || !state.selectedTower || state.gameOver || state.gold < upgradeCostNow;
+      startWaveBtn.disabled = state.paused || state.waveInProgress || state.gameOver;
       const secs = Math.max(0, Math.ceil(state.nextWaveTimer));
       startWaveBtn.textContent = `▶${secs}s`;
       startWaveBtn.title = state.waveInProgress
-        ? `Next wave in ${secs}s`
-        : `Call Wave (${secs}s)`;
+        ? `Next wave in ${secs}s (Space/N)`
+        : `Call Wave (${secs}s) (Space/N)`;
       startWaveBtn.classList.toggle("pulse", state.waveReadyGlow && !state.gameOver);
+      pauseBtn.disabled = false;
+      pauseBtn.textContent = state.gameOver ? "↻" : (state.paused ? "▶" : "⏸");
+      pauseBtn.title = state.gameOver ? "Restart (P)" : (state.paused ? "Resume (P)" : "Pause (P)");
       const meteorOnCooldown = Date.now() < state.meteorReadyAt;
-      meteorBtn.disabled = state.gameOver || (meteorOnCooldown && !state.aimingMeteor);
+      meteorBtn.disabled = state.paused || state.gameOver || (meteorOnCooldown && !state.aimingMeteor);
       if (state.aimingMeteor) {
         meteorBtn.textContent = "✕";
       } else if (meteorOnCooldown) {
@@ -616,21 +643,31 @@
       }
       const meteorDamageNow = METEOR_DAMAGE + state.wave * METEOR_WAVE_BONUS;
       meteorBtn.title = state.aimingMeteor
-        ? "Cancel Meteor (M)"
+        ? "Cancel Meteor (Esc/M)"
         : `Meteor (M) DMG ${meteorDamageNow} R${METEOR_RADIUS} CD ${METEOR_CD_MS / 1000}s`;
       meteorBtn.classList.toggle("pulse", !state.gameOver && state.waveInProgress && Date.now() >= state.meteorReadyAt && !state.aimingMeteor);
       if (state.selectedTower) {
         const c = getUpgradeCost(state.selectedTower);
-        upgradeBtn.title = `Upgrade Lv.${state.selectedTower.level} ($${c})`;
+        upgradeBtn.title = `Upgrade (U) Lv.${state.selectedTower.level} ($${c})`;
         upgradeBtn.textContent = `⇧${c}`;
         const invested = state.selectedTower.totalInvested || state.selectedTower.cost;
         sellBtn.textContent = `$${Math.floor(invested * 0.6)}`;
+        sellBtn.title = "Sell Selected (V)";
       } else {
         upgradeBtn.title = "Upgrade Selected (U)";
         upgradeBtn.textContent = "⇧";
         sellBtn.textContent = "$";
+        sellBtn.title = "Sell Selected (V)";
       }
-      statusText.textContent = state.message || "";
+      const msg = state.message || "";
+      if (msg !== lastStatusMessage) {
+        lastStatusMessage = msg;
+        state.messageAt = Date.now();
+      }
+      const age = (Date.now() - (state.messageAt || Date.now())) / 1000;
+      const opacity = msg ? (age < 1.8 ? 1 : Math.max(0, 1 - (age - 1.8) / 0.8)) : 0;
+      statusText.textContent = msg;
+      statusText.style.opacity = `${opacity}`;
       updateSelectionStats();
     }
 
@@ -647,8 +684,9 @@
         slow: t.slow ? Math.max(0.35, t.slow - 0.04) : 0,
         poison: t.poisonDps ? Math.round(t.poisonDps * 1.3) : 0,
         burning: t.burningDps ? Math.round(t.burningDps * 1.3) : 0,
-        chain: t.ionMarkAmp ? `${Math.round((t.ionMarkAmp + 0.02) * 100)}%` : "",
-        burst: t.burstDamage ? Math.round(t.burstDamage * 1.2) : 0
+        chain: t.chainTargets || 0,
+        markAmp: t.ionMarkAmp ? `${Math.round((t.ionMarkAmp + 0.02) * 100)}%` : "",
+        burstPierce: t.burstPierce || 0
       };
     }
 
@@ -675,15 +713,17 @@
         if (t.poisonDps) extra += ` | ${t.dotLabel || "Poison"} ${Math.round(t.poisonDps)}/s`;
         if (t.burningDps) extra += ` | Burning ${Math.round(t.burningDps)}/s`;
         if (t.chainTargets) extra += ` | Chain x${t.chainTargets}`;
-        if (t.burstDamage) extra += ` | Burst ${Math.round(t.burstDamage)}`;
+        if (t.ionMarkAmp) extra += ` | Mark +${Math.round((t.ionMarkAmp - 1) * 100)}%`;
+        if (t.burstPierce) extra += ` | Burst Pierce ${t.burstPierce}`;
         const next = getProjectedUpgrade(t);
         let nextExtra = "";
         if (next.splash) nextExtra += ` | Splash ${next.splash}`;
         if (next.slow) nextExtra += ` | Slow ${(100 - next.slow * 100).toFixed(0)}%`;
         if (next.poison) nextExtra += ` | ${t.dotLabel || "Poison"} ${next.poison}/s`;
         if (next.burning) nextExtra += ` | Burning ${next.burning}/s`;
-        if (next.chain) nextExtra += ` | Chain ${next.chain}`;
-        if (next.burst) nextExtra += ` | Burst ${next.burst}`;
+        if (next.chain) nextExtra += ` | Chain x${next.chain}`;
+        if (next.markAmp) nextExtra += ` | Mark +${Math.round(Number.parseInt(next.markAmp, 10) - 100)}%`;
+        if (next.burstPierce) nextExtra += ` | Burst Pierce ${next.burstPierce}`;
         selectionStats.innerHTML =
           `${t.name} Lv.${t.level} | DMG ${Math.round(t.damage)} | DPS ${dps} | Range ${Math.round(t.range)} | Rate ${shotsPerSec}/s${extra}<br><span class=\"upgrade-preview\">Next Lv.${next.level} | DMG ${next.damage} | DPS ${next.dps} | Range ${next.range} | Rate ${next.rate}/s${nextExtra}</span>`;
         return;
@@ -702,14 +742,16 @@
         if (t.poisonDps) extra += ` | ${t.dotLabel || "Poison"} ${Math.round(t.poisonDps)}/s`;
         if (t.burningDps) extra += ` | Burning ${Math.round(t.burningDps)}/s`;
         if (t.chainTargets) extra += ` | Chain x${t.chainTargets}`;
-        if (t.burstDamage) extra += ` | Burst ${Math.round(t.burstDamage)}`;
+        if (t.ionMarkAmp) extra += ` | Mark +${Math.round((t.ionMarkAmp - 1) * 100)}%`;
+        if (t.burstPierce) extra += ` | Burst Pierce ${t.burstPierce}`;
         let nextExtra = "";
         if (next.splash) nextExtra += ` | Splash ${next.splash}`;
         if (next.slow) nextExtra += ` | Slow ${(100 - next.slow * 100).toFixed(0)}%`;
         if (next.poison) nextExtra += ` | ${t.dotLabel || "Poison"} ${next.poison}/s`;
         if (next.burning) nextExtra += ` | Burning ${next.burning}/s`;
-        if (next.chain) nextExtra += ` | Chain ${next.chain}`;
-        if (next.burst) nextExtra += ` | Burst ${next.burst}`;
+        if (next.chain) nextExtra += ` | Chain x${next.chain}`;
+        if (next.markAmp) nextExtra += ` | Mark +${Math.round(Number.parseInt(next.markAmp, 10) - 100)}%`;
+        if (next.burstPierce) nextExtra += ` | Burst Pierce ${next.burstPierce}`;
         selectionStats.innerHTML =
           `${t.name} ($${t.cost}) | DMG ${Math.round(t.damage)} | DPS ${dps} | Range ${Math.round(t.range)} | Rate ${shotsPerSec}/s${extra}<br><span class=\"upgrade-preview\">Next Lv.${next.level} | DMG ${next.damage} | DPS ${next.dps} | Range ${next.range} | Rate ${next.rate}/s${nextExtra}</span>`;
         return;
@@ -729,7 +771,7 @@
     }
 
     function newEnemy(kind, wave) {
-      const hpScale = (1.85 + wave * 0.52) * (1 + wave * 0.028);
+      const hpScale = (1.78 + wave * 0.48) * (1 + wave * 0.022);
       const speedScale = 1 + wave * 0.022;
       const rewardScale = 1 + wave * 0.03;
       const base = {
@@ -744,31 +786,40 @@
         burningDps: 0,
         burningTimer: 0,
         damageAmp: 1,
-        damageAmpTimer: 0
+        damageAmpTimer: 0,
+        damageAmpColor: "#f58cff"
       };
       if (kind === "swarm") {
         const maxHp = Math.round(42 * hpScale);
         return { ...base, kind, hp: maxHp, maxHp, speed: 132 * speedScale, reward: Math.round(5 * rewardScale), color: "#fff37a", r: 8 };
       }
       if (kind === "fast") {
-        const maxHp = Math.round(56 * hpScale);
+        const maxHp = Math.round(72 * hpScale);
         return { ...base, kind, hp: maxHp, maxHp, speed: 104 * speedScale, reward: Math.round(7 * rewardScale), color: "#f4d35e", r: 10 };
       }
       if (kind === "armored") {
-        const maxHp = Math.round(245 * hpScale);
+        const maxHp = Math.round(225 * hpScale);
         return { ...base, kind, hp: maxHp, maxHp, speed: 52 * speedScale, reward: Math.round(16 * rewardScale), color: "#9bb5c9", r: 14, armor: 0.28 };
       }
+      if (kind === "striker") {
+        const maxHp = Math.round(102 * hpScale);
+        return { ...base, kind, hp: maxHp, maxHp, speed: 122 * speedScale, reward: Math.round(10 * rewardScale), color: "#ffb778", r: 11 };
+      }
+      if (kind === "bulwark") {
+        const maxHp = Math.round(305 * hpScale);
+        return { ...base, kind, hp: maxHp, maxHp, speed: 45 * speedScale, reward: Math.round(20 * rewardScale), color: "#8aa0b8", r: 16, armor: 0.4 };
+      }
       if (kind === "tank") {
-        const maxHp = Math.round(185 * hpScale);
-        return { ...base, kind, hp: maxHp, maxHp, speed: 56 * speedScale, reward: Math.round(13 * rewardScale), color: "#f16f8a", r: 15 };
+        const maxHp = Math.round(175 * hpScale);
+        return { ...base, kind, hp: maxHp, maxHp, speed: 56 * speedScale, reward: Math.round(13 * rewardScale), color: "#f16f8a", r: 15, armor: 0.12 };
       }
       if (kind === "leech") {
         const maxHp = Math.round(120 * hpScale);
         return { ...base, kind, hp: maxHp, maxHp, speed: 98 * speedScale, reward: Math.round(10 * rewardScale), color: "#73ffd4", r: 11, coreDamage: 2 };
       }
       if (kind === "boss") {
-        const maxHp = Math.round(620 * hpScale);
-        return { ...base, kind, hp: maxHp, maxHp, speed: 51 * speedScale, reward: Math.round(36 * rewardScale), color: "#c972ff", r: 18 };
+        const maxHp = Math.round(565 * hpScale);
+        return { ...base, kind, hp: maxHp, maxHp, speed: 51 * speedScale, reward: Math.round(36 * rewardScale), color: "#c972ff", r: 18, armor: 0.18 };
       }
       const maxHp = Math.round(88 * hpScale);
       return { ...base, kind: "basic", hp: maxHp, maxHp, speed: 72 * speedScale, reward: Math.round(9 * rewardScale), color: "#75e9a7", r: 12 };
@@ -822,7 +873,8 @@
         return "swarm";
       }
       if (pattern === "armorColumn") {
-        if (idx % 5 === 0) return "tank";
+        if (idx % 6 === 0) return "tank";
+        if (idx % 2 === 0) return "bulwark";
         return "armored";
       }
       if (pattern === "leechRaid") {
@@ -831,18 +883,23 @@
         return "basic";
       }
       if (pattern === "blitz") {
+        if (idx % 3 === 0) return "striker";
         if (idx % 2 === 0) return "fast";
         return "swarm";
       }
       if (pattern === "mixedElite") {
         if (idx % 9 === 0) return "boss";
+        if (idx % 6 === 0) return "bulwark";
         if (idx % 4 === 0) return "armored";
         if (idx % 3 === 0) return "tank";
+        if (idx % 2 === 0) return "striker";
         return "leech";
       }
       if (wave >= 10 && idx % 10 === 0) return "boss";
+      if (wave >= 8 && idx % 9 === 0) return "bulwark";
       if (wave >= 7 && idx % 7 === 0) return "armored";
       if (wave >= 6 && idx % 8 === 0) return "leech";
+      if (wave >= 5 && idx % 6 === 0) return "striker";
       if (wave >= 4 && idx % 4 === 0) return "tank";
       if (wave >= 3 && idx % 5 === 0) return "swarm";
       if (wave >= 2 && idx % 2 === 0) return "fast";
@@ -892,6 +949,7 @@
           e.damageAmpTimer -= dt;
         } else {
           e.damageAmp = 1;
+          e.damageAmpColor = "#f58cff";
         }
 
         let move = e.speed * e.slowFactor * dt;
@@ -973,7 +1031,7 @@
             vy: Math.sin(shotAngle) * tower.projectileSpeed,
             life: 1.8,
             type: tower.type,
-            damage: isBurstShot ? tower.damage * 1.15 : tower.damage,
+            damage: tower.damage,
             splash: tower.splash || 0,
             slow: tower.slow || 0,
             slowTime: tower.slowTime || 0,
@@ -982,13 +1040,13 @@
             burningDps: isBurningShot ? tower.burningDps || 0 : 0,
             burningTime: isBurningShot ? tower.burningTime || 0 : 0,
             burningRadius: isBurningShot ? tower.burningRadius || 0 : 0,
+            armorShred: tower.armorShred || 0,
             chainTargets: tower.chainTargets || 0,
             chainRange: tower.chainRange || 0,
             chainDamageFalloff: tower.chainDamageFalloff || 1,
             ionMarkAmp: tower.ionMarkAmp || 1,
             ionMarkTime: tower.ionMarkTime || 0,
-            burstRadius: isBurstShot ? tower.burstRadius || 0 : 0,
-            burstDamage: isBurstShot ? tower.burstDamage || 0 : 0,
+            pierceLeft: isBurstShot ? tower.burstPierce || 0 : 0,
             color: tower.color
           });
         }
@@ -1058,6 +1116,7 @@
         if (projectile.ionMarkAmp > 1) {
           next.damageAmp = Math.max(next.damageAmp || 1, projectile.ionMarkAmp);
           next.damageAmpTimer = Math.max(next.damageAmpTimer || 0, projectile.ionMarkTime);
+          next.damageAmpColor = projectile.color || "#f58cff";
         }
         burst(next.x, next.y, "#8af7ff", 5, 20);
         from = next;
@@ -1076,8 +1135,8 @@
         for (const enemy of [...state.enemies]) {
           if (Math.hypot(enemy.x - h.x, enemy.y - h.y) <= h.radius) {
             hitEnemy(enemy, h.dps * dt, true);
-            enemy.poisonDps = Math.max(enemy.poisonDps, h.dps * 0.45);
-            enemy.poisonTimer = Math.max(enemy.poisonTimer, 0.5);
+            enemy.burningDps = Math.max(enemy.burningDps || 0, h.dps * 0.72);
+            enemy.burningTimer = Math.max(enemy.burningTimer || 0, 0.45);
           }
         }
       }
@@ -1111,31 +1170,36 @@
                 enemy.poisonTimer = Math.max(enemy.poisonTimer, p.poisonTime);
                 burst(enemy.x, enemy.y, "#8bff9d", 5, 16);
               }
+              if (p.armorShred > 0) {
+                enemy.armor = Math.max(0, (enemy.armor || 0) - p.armorShred);
+                burst(enemy.x, enemy.y, "#ffcc9a", 3, 8);
+              }
               if (p.burningDps) {
                 const r = p.burningRadius || 0;
-                burst(p.x, p.y, "#ff9c5f", 8, 20);
-                for (const around of state.enemies) {
-                  if (Math.hypot(around.x - p.x, around.y - p.y) <= r) {
-                    around.burningDps = Math.max(around.burningDps || 0, p.burningDps);
-                    around.burningTimer = Math.max(around.burningTimer || 0, p.burningTime);
-                    burst(around.x, around.y, "#ffb36e", 4, 10);
-                  }
-                }
+                spawnHazard(enemy.x, enemy.y, r, p.burningDps, p.burningTime, "rgba(255,120,72,0.35)");
+                burst(enemy.x, enemy.y, "#ff9c5f", 10, 22);
               }
               if (p.ionMarkAmp > 1) {
                 enemy.damageAmp = Math.max(enemy.damageAmp || 1, p.ionMarkAmp);
                 enemy.damageAmpTimer = Math.max(enemy.damageAmpTimer || 0, p.ionMarkTime);
+                enemy.damageAmpColor = p.color || "#f58cff";
                 burst(enemy.x, enemy.y, "#f58cff", 4, 12);
               }
               if (p.chainTargets > 0) {
                 chainShock(enemy, p);
               }
-              if (p.burstRadius > 0) {
-                explode(p.x, p.y, p.burstRadius, p.burstDamage, "#ff9058", 0, 0);
-                burst(p.x, p.y, "#ffddb8", 10, 24);
+              if (p.pierceLeft > 0) {
+                p.pierceLeft -= 1;
+                p.life -= 0.06;
+                p.x += p.vx * 0.01;
+                p.y += p.vy * 0.01;
+                burst(enemy.x, enemy.y, "#ffd6d6", 5, 12);
+                didHit = false;
+              } else {
+                didHit = true;
               }
             }
-            didHit = true;
+            if (p.pierceLeft <= 0) didHit = true;
             break;
           }
         }
@@ -1253,7 +1317,8 @@
     }
 
     function getUpgradeCost(tower) {
-      const raw = tower.cost * 2 * Math.pow(1.18, tower.level - 1);
+      const level = tower.level - 1;
+      const raw = tower.cost * 2 * Math.pow(1.24, level) * (1 + Math.max(0, level - 2) * 0.12);
       return Math.ceil(raw / 5) * 5;
     }
 
@@ -1279,7 +1344,13 @@
       if (t.burningTime) t.burningTime += 0.2;
       if (t.ionMarkAmp) t.ionMarkAmp += 0.02;
       if (t.ionMarkTime) t.ionMarkTime += 0.15;
-      if (t.burstDamage) t.burstDamage *= 1.2;
+      if (t.type === "scatter" && t.level % 10 === 0) {
+        t.pellets = (t.pellets || 3) + 2;
+        t.fireRate *= 1.08;
+      }
+      if (t.type === "storm" && t.level % 10 === 0) {
+        t.chainTargets = (t.chainTargets || 0) + 1;
+      }
       t.upgradeFx = 0.45;
       state.message = `${t.name} upgraded to Lv.${t.level}.`;
       updateHUD();
@@ -1299,6 +1370,10 @@
 
     canvas.addEventListener("click", (evt) => {
       if (state.gameOver) return;
+      if (state.paused) {
+        pauseBtn.click();
+        return;
+      }
       const { x, y } = worldPos(evt);
       const gx = Math.round(x / grid) * grid;
       const gy = Math.round(y / grid) * grid;
@@ -1412,18 +1487,55 @@
       state.message = state.aimingMeteor ? "Click battlefield to call meteor." : "Meteor canceled.";
       updateButtons();
     });
+    pauseBtn.addEventListener("click", () => {
+      if (state.gameOver) {
+        resetGame();
+        startLoop();
+        return;
+      }
+      state.paused = !state.paused;
+      state.message = state.paused ? "Paused." : "Resumed.";
+      updateButtons();
+    });
 
     startWaveBtn.addEventListener("click", startWave);
     upgradeBtn.addEventListener("click", upgradeTower);
     window.addEventListener("keydown", (e) => {
-      if (e.key.toLowerCase() === "m") {
+      const key = e.key.toLowerCase();
+      if (key === "m") {
         meteorBtn.click();
+        return;
       }
-      const quickMap = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"];
-      const qi = quickMap.indexOf(e.key);
-      if (qi >= 0 && towerButtons[qi]) towerButtons[qi].click();
-      if (e.key.toLowerCase() === "u") upgradeTower();
-      if (e.key === " ") {
+      if (key === "p") {
+        pauseBtn.click();
+        return;
+      }
+      if (state.paused) return;
+      for (let i = 0; i < towerHotkeys.length; i++) {
+        if (towerHotkeys[i].includes(key) && towerButtons[i]) {
+          towerButtons[i].click();
+          return;
+        }
+      }
+      if (key === "u") {
+        upgradeTower();
+        return;
+      }
+      if (key === "v") {
+        sellBtn.click();
+        return;
+      }
+      if (key === "escape") {
+        if (state.selectedBuild || state.aimingMeteor) {
+          state.selectedBuild = null;
+          state.aimingMeteor = false;
+          state.statsMode = "unit";
+          state.message = "Action canceled.";
+          updateButtons();
+        }
+        return;
+      }
+      if (key === "n" || e.key === " ") {
         e.preventDefault();
         startWave();
       }
@@ -1517,8 +1629,8 @@
       ctx.lineJoin = "round";
 
       const grad = ctx.createLinearGradient(0, 60, W, 390);
-      grad.addColorStop(0, "rgba(255,163,89,0.95)");
-      grad.addColorStop(1, "rgba(255,99,146,0.9)");
+      grad.addColorStop(0, "rgba(240,163,89,0.95)");
+      grad.addColorStop(1, "rgba(240,99,146,0.9)");
 
       ctx.strokeStyle = "rgba(255, 255, 255, 0.14)";
       ctx.lineWidth = 44;
@@ -1534,7 +1646,7 @@
       for (let i = 1; i < path.length; i++) ctx.lineTo(path[i].x, path[i].y);
       ctx.stroke();
 
-      ctx.strokeStyle = "rgba(255,255,255,0.35)";
+      ctx.strokeStyle = "rgba(255,255,255,0.3)";
       ctx.setLineDash([10, 18]);
       ctx.lineWidth = 2;
       ctx.beginPath();
@@ -1726,11 +1838,29 @@
         if (e.kind === "swarm") {
           drawPoly(0, 0, e.r + 1, 3, -Math.PI / 2);
           ctx.fill();
+        } else if (e.kind === "striker") {
+          drawPoly(0, 0, e.r + 1, 4, Math.PI / 4);
+          ctx.fill();
+          ctx.fillStyle = "#53331f";
+          ctx.beginPath();
+          ctx.arc(0, 0, e.r * 0.3, 0, Math.PI * 2);
+          ctx.fill();
         } else if (e.kind === "fast") {
           ctx.save();
           ctx.rotate(Math.PI / 4);
           ctx.fillRect(-e.r * 0.85, -e.r * 0.85, e.r * 1.7, e.r * 1.7);
           ctx.restore();
+        } else if (e.kind === "bulwark") {
+          drawPoly(0, 0, e.r + 1, 8, Math.PI / 8);
+          ctx.fill();
+          ctx.strokeStyle = "#d3e0ec";
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.moveTo(-e.r * 0.55, 0);
+          ctx.lineTo(e.r * 0.55, 0);
+          ctx.moveTo(0, -e.r * 0.55);
+          ctx.lineTo(0, e.r * 0.55);
+          ctx.stroke();
         } else if (e.kind === "armored") {
           ctx.fillRect(-e.r, -e.r, e.r * 2, e.r * 2);
           ctx.strokeStyle = "#d6e4ef";
@@ -1757,6 +1887,12 @@
         ctx.lineWidth = 2;
         if (e.kind === "armored") {
           ctx.strokeRect(-e.r, -e.r, e.r * 2, e.r * 2);
+        } else if (e.kind === "bulwark") {
+          drawPoly(0, 0, e.r + 1, 8, Math.PI / 8);
+          ctx.stroke();
+        } else if (e.kind === "striker") {
+          drawPoly(0, 0, e.r + 1, 4, Math.PI / 4);
+          ctx.stroke();
         } else if (e.kind === "fast") {
           ctx.save();
           ctx.rotate(Math.PI / 4);
@@ -1778,7 +1914,15 @@
         const hpY = -e.r - 10;
         ctx.fillStyle = "rgba(10, 20, 30, 0.7)";
         ctx.fillRect(-hpW / 2, hpY, hpW, 4);
-        ctx.fillStyle = e.kind === "armored" ? "#b4d0ff" : e.kind === "leech" ? "#80ffe5" : "#7cff95";
+        ctx.fillStyle = e.kind === "bulwark"
+          ? "#c5d9eb"
+          : e.kind === "armored"
+            ? "#b4d0ff"
+            : e.kind === "striker"
+              ? "#ffd39d"
+              : e.kind === "leech"
+                ? "#80ffe5"
+                : "#7cff95";
         ctx.fillRect(-hpW / 2, hpY, hpW * Math.max(0, e.hp / e.maxHp), 4);
 
         if (e.slowTimer > 0) {
@@ -1805,7 +1949,7 @@
           ctx.fill();
         }
         if (e.damageAmpTimer > 0) {
-          ctx.strokeStyle = "rgba(247, 124, 255, 0.9)";
+          ctx.strokeStyle = e.damageAmpColor || "#f58cff";
           ctx.lineWidth = 1.4;
           ctx.beginPath();
           ctx.moveTo(0, -e.r - 8);
@@ -2010,6 +2154,21 @@
       ctx.restore();
     }
 
+    function drawPaused() {
+      if (!state.paused || state.gameOver) return;
+      ctx.save();
+      ctx.fillStyle = "rgba(2, 8, 16, 0.42)";
+      ctx.fillRect(0, 0, W, H);
+      ctx.fillStyle = "#cbe3ff";
+      ctx.font = "700 42px 'Bungee', sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText("Paused", W / 2, H / 2);
+      ctx.font = "600 16px 'Space Grotesk', sans-serif";
+      ctx.fillText("Press P to resume", W / 2, H / 2 + 30);
+      ctx.textAlign = "start";
+      ctx.restore();
+    }
+
     const mouse = { x: W / 2, y: H / 2 };
     canvas.addEventListener("mousemove", (e) => {
       const p = worldPos(e);
@@ -2045,20 +2204,20 @@
       const dt = Math.min(0.033, (t - lastTime) / 1000);
       lastTime = t;
 
-      if (!state.gameOver) {
+      if (!state.gameOver && !state.paused) {
         state.nextWaveTimer -= dt;
         if (state.nextWaveTimer <= 0) startWave(false);
+        spawnEnemyBatch(dt);
+        updateEnemies(dt);
+        updateTowers(dt);
+        for (const t of state.towers) {
+          if (t.upgradeFx > 0) t.upgradeFx = Math.max(0, t.upgradeFx - dt);
+        }
+        updateProjectiles(dt);
+        updateMeteorEffects(dt);
+        updateParticles(dt);
+        updateHazards(dt);
       }
-      spawnEnemyBatch(dt);
-      updateEnemies(dt);
-      updateTowers(dt);
-      for (const t of state.towers) {
-        if (t.upgradeFx > 0) t.upgradeFx = Math.max(0, t.upgradeFx - dt);
-      }
-      updateProjectiles(dt);
-      updateMeteorEffects(dt);
-      updateParticles(dt);
-      updateHazards(dt);
 
       if (state.waveInProgress && state.toSpawn <= 0) {
         state.waveInProgress = false;
@@ -2101,6 +2260,7 @@
       drawParticles();
       drawPlacementGhost();
       drawMeteorMarker();
+      drawPaused();
       drawGameOver();
     }
 

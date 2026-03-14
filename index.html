@@ -387,7 +387,7 @@
       const inFullscreen = document.fullscreenElement === canvas;
       const availW = inFullscreen ? window.innerWidth : (wrap ? wrap.clientWidth : window.innerWidth);
       const availH = inFullscreen ? window.innerHeight : (wrap ? wrap.clientHeight : window.innerHeight);
-      const aspect = BASE_W / BASE_H;
+      const aspect = 16 / 9;
       let cssW = availW;
       let cssH = availH;
       if (!inFullscreen) {
@@ -416,7 +416,7 @@
     const WAVE_INTERVAL_S = 35;
     const METEOR_RADIUS = 56;
     const METEOR_DAMAGE = 180;
-    const METEOR_WAVE_BONUS = 24;
+    const METEOR_WAVE_BONUS = 40;
     const uiState = { buttons: [], buildButtons: [], pauseButtons: [], startButton: null };
 
     const path = [
@@ -456,32 +456,32 @@
         desc: "Heavy splash damage.",
         cost: 350,
         range: 160,
-        fireRate: 1.12,
+        fireRate: 1.1,
         damage: 196,
-        splash: 38,
+        splash: 40,
         color: "#ffb347",
-        projectileSpeed: 560
+        projectileSpeed: 568
       },
       frost: {
         name: "Cryo Prism",
         desc: "Slows targets with chilled hits.",
         cost: 400,
-        range: 156,
-        fireRate: 0.76,
+        range: 176,
+        fireRate: 0.7,
         damage: 18,
-        slow: 0.85,
+        slow: 0.76,
         slowTime: 1.0,
         color: "#a6b9ff",
         projectileSpeed: 520
       },
       rail: {
         name: "Rail Lance",
-        desc: "Long-range pierce bursts.",
-        cost: 3200,
-        range: 300,
+        desc: "Long-range pierce shells.",
+        cost: 3600,
+        range: 275,
         fireRate: 0.58,
         damage: 1120,
-        burstCycle: 5,
+        burstCycle: 4,
         burstPierce: 3,
         color: "#ff7e7e",
         projectileSpeed: 1100
@@ -492,7 +492,7 @@
         cost: 800,
         range: 196,
         fireRate: 0.3,
-        damage: 75,
+        damage: 76,
         poisonDps: 190,
         poisonTime: 4.2,
         color: "#87ff94",
@@ -500,7 +500,7 @@
       },
       ember: {
         name: "Ember Forge",
-        desc: "Molten shots and burning field.",
+        desc: "Armor shred and burning field.",
         cost: 2200,
         range: 196,
         fireRate: 1.28,
@@ -530,10 +530,10 @@
       mortar: {
         name: "Siege Mortar",
         desc: "Long-range explosive shells.",
-        cost: 6000,
-        range: 286,
+        cost: 6400,
+        range: 284,
         fireRate: 1.95,
-        damage: 990,
+        damage: 1090,
         splash: 108,
         color: "#dbc8a5",
         projectileSpeed: 580
@@ -634,6 +634,7 @@
         toSpawn: 0,
         spawnTimer: 0,
         nextWaveTimer: WAVE_INTERVAL_S,
+        nextWaveDisabled: false,
         waveReadyGlow: false,
         clearedWave: 0,
         meteorReadyAt: 0,
@@ -641,6 +642,7 @@
         paused: false,
         messageAt: Date.now(),
         gameOver: false,
+        victory: false,
         screen: "start",
         message: "Set up quickly. First wave auto-starts in 35s."
       };
@@ -657,11 +659,11 @@
         lastStatusMessage = state.message;
         state.messageAt = Date.now();
       }
-      sellBtn.disabled = state.paused || !state.selectedTower || state.gameOver;
+      sellBtn.disabled = state.paused || !state.selectedTower || state.gameOver || state.victory;
       const upgradeCostNow = state.selectedTower ? getUpgradeCost(state.selectedTower) : Infinity;
-      upgradeBtn.disabled = state.paused || !state.selectedTower || state.gameOver || state.gold < upgradeCostNow;
-      startWaveBtn.disabled = state.paused || state.waveInProgress || state.gameOver;
-      const secs = Math.max(0, Math.ceil(state.nextWaveTimer));
+      upgradeBtn.disabled = state.paused || !state.selectedTower || state.gameOver || state.victory || state.gold < upgradeCostNow || (state.selectedTower && state.selectedTower.level >= 10);
+      startWaveBtn.disabled = state.paused || state.waveInProgress || state.gameOver || state.victory;
+      const secs = state.nextWaveDisabled ? "--" : Math.max(0, Math.ceil(state.nextWaveTimer));
       startWaveBtn.textContent = `▶${secs}s`;
       startWaveBtn.title = state.waveInProgress
         ? `Next wave in ${secs}s (Space/N)`
@@ -670,7 +672,7 @@
       pauseBtn.textContent = state.gameOver ? "↻" : (state.paused ? "▶" : "⏸");
       pauseBtn.title = state.gameOver ? "Restart (P)" : (state.paused ? "Resume (P)" : "Pause (P)");
       const meteorOnCooldown = Date.now() < state.meteorReadyAt;
-      meteorBtn.disabled = state.paused || state.gameOver || (meteorOnCooldown && !state.aimingMeteor);
+      meteorBtn.disabled = state.paused || state.gameOver || state.victory || (meteorOnCooldown && !state.aimingMeteor);
       if (state.aimingMeteor) {
         meteorBtn.textContent = "✕";
       } else if (meteorOnCooldown) {
@@ -684,10 +686,10 @@
         : `Meteor (M) DMG ${meteorDamageNow} R${METEOR_RADIUS} CD ${METEOR_CD_MS / 1000}s`;
       if (state.selectedTower) {
         const c = getUpgradeCost(state.selectedTower);
-        upgradeBtn.title = `Upgrade (U) Lv.${state.selectedTower.level} ($${c})`;
-        upgradeBtn.textContent = `⇧${c}`;
+        upgradeBtn.title = state.selectedTower.level >= 10 ? "Max level reached" : `Upgrade (U) Lv.${state.selectedTower.level} ($${c})`;
+        upgradeBtn.textContent = state.selectedTower.level >= 10 ? "MAX" : `⇧${c}`;
         const invested = state.selectedTower.totalInvested || state.selectedTower.cost;
-        sellBtn.textContent = `$${Math.floor(invested * 0.6)}`;
+        sellBtn.textContent = `$${Math.floor(invested * 0.7)}`;
         sellBtn.title = "Sell Selected (V)";
       } else {
         upgradeBtn.title = "Upgrade Selected (U)";
@@ -716,6 +718,9 @@
       const nextBurstPierce = t.burstPierce
         ? (t.type === "rail" && (t.level + 1) % 5 === 0 ? t.burstPierce + 1 : t.burstPierce)
         : 0;
+      const nextChain = t.chainTargets
+        ? (t.type === "storm" && (t.level + 1) % 5 === 0 ? t.chainTargets + 1 : t.chainTargets)
+        : 0;
       const markStep = t.type === "ion" ? 0.04 : 0.02;
       return {
         level: t.level + 1,
@@ -727,7 +732,7 @@
         slow: t.slow ? Math.max(0.35, t.slow - 0.04) : 0,
         poison: t.poisonDps ? Math.round(t.poisonDps * (t.type === "venom" ? 1.45 : 1.3)) : 0,
         burning: t.burningDps ? Math.round(t.burningDps * 1.3) : 0,
-        chain: t.chainTargets || 0,
+        chain: nextChain,
         markAmp: t.ionMarkAmp ? `${Math.round((t.ionMarkAmp + markStep) * 100)}%` : "",
         burstPierce: nextBurstPierce,
         pellets: nextPellets
@@ -772,10 +777,17 @@
         if (next.chain) nextExtra += ` | Chain x${next.chain}`;
         if (next.markAmp) nextExtra += ` | Mark +${Math.round(Number.parseInt(next.markAmp, 10) - 100)}%`;
         if (next.burstPierce) nextExtra += ` | Burst Pierce ${next.burstPierce}`;
-        setSelectionLines([
-          { text: `${t.name} Lv.${t.level} | DMG ${Math.round(t.damage)} | DPS ${dps} | Range ${Math.round(t.range)} | Rate ${shotsPerSec}/s${extra}`, tone: "base" },
-          { text: `Next Lv.${next.level} | DMG ${next.damage} | DPS ${next.dps} | Range ${next.range} | Rate ${next.rate}/s${nextExtra}`, tone: "upgrade" }
-        ]);
+        if (t.level >= 10) {
+          setSelectionLines([
+            { text: `${t.name} Lv.${t.level} | DMG ${Math.round(t.damage)} | DPS ${dps} | Range ${Math.round(t.range)} | Rate ${shotsPerSec}/s${extra}`, tone: "base" },
+            { text: "Max level reached.", tone: "upgrade" }
+          ]);
+        } else {
+          setSelectionLines([
+            { text: `${t.name} Lv.${t.level} | DMG ${Math.round(t.damage)} | DPS ${dps} | Range ${Math.round(t.range)} | Rate ${shotsPerSec}/s${extra}`, tone: "base" },
+            { text: `Next Lv.${next.level} | DMG ${next.damage} | DPS ${next.dps} | Range ${next.range} | Rate ${next.rate}/s${nextExtra}`, tone: "upgrade" }
+          ]);
+        }
         return;
       }
 
@@ -827,7 +839,7 @@
 
     function newEnemy(kind, wave) {
       const hpScale = (1.78 + wave * 0.48) * (1 + wave * 0.022);
-      const speedScale = 1 + wave * 0.016;
+      const speedScale = 1 + wave * 0.01;
       const rewardScale = 1 + wave * 0.03;
       const base = {
         p: 0,
@@ -845,55 +857,62 @@
         damageAmpColor: "#f58cff"
       };
       if (kind === "swarm") {
-        const maxHp = Math.round(42 * hpScale);
+        const maxHp = Math.round(70 * hpScale);
         return { ...base, kind, hp: maxHp, maxHp, speed: 132 * speedScale, reward: Math.round(5 * rewardScale), color: "#fff37a", r: 8 };
       }
       if (kind === "fast") {
-        const maxHp = Math.round(72 * hpScale);
+        const maxHp = Math.round(120 * hpScale);
         return { ...base, kind, hp: maxHp, maxHp, speed: 104 * speedScale, reward: Math.round(7 * rewardScale), color: "#f4d35e", r: 10 };
       }
       if (kind === "armored") {
-        const maxHp = Math.round(225 * hpScale);
-        return { ...base, kind, hp: maxHp, maxHp, speed: 52 * speedScale, reward: Math.round(16 * rewardScale), color: "#9bb5c9", r: 14, armor: 0.25 };
+        const maxHp = Math.round(205 * hpScale);
+        return { ...base, kind, hp: maxHp, maxHp, speed: 52 * speedScale, reward: Math.round(18 * rewardScale), color: "#9bb5c9", r: 14, armor: 0.25 };
       }
       if (kind === "striker") {
-        const maxHp = Math.round(102 * hpScale);
-        return { ...base, kind, hp: maxHp, maxHp, speed: 122 * speedScale, reward: Math.round(10 * rewardScale), color: "#ffb778", r: 11 };
+        const maxHp = Math.round(130 * hpScale);
+        return { ...base, kind, hp: maxHp, maxHp, speed: 92 * speedScale, reward: Math.round(10 * rewardScale), color: "#ffb778", r: 11, armor: 0.08 };
       }
       if (kind === "bulwark") {
-        const maxHp = Math.round(305 * hpScale);
-        return { ...base, kind, hp: maxHp, maxHp, speed: 45 * speedScale, reward: Math.round(20 * rewardScale), color: "#8aa0b8", r: 16, armor: 0.4 };
+        const maxHp = Math.round(290 * hpScale);
+        return { ...base, kind, hp: maxHp, maxHp, speed: 48 * speedScale, reward: Math.round(22 * rewardScale), color: "#8aa0b8", r: 16, armor: 0.4 };
       }
       if (kind === "tank") {
-        const maxHp = Math.round(175 * hpScale);
-        return { ...base, kind, hp: maxHp, maxHp, speed: 56 * speedScale, reward: Math.round(13 * rewardScale), color: "#f16f8a", r: 15, armor: 0.12 };
+        const maxHp = Math.round(195 * hpScale);
+        return { ...base, kind, hp: maxHp, maxHp, speed: 48 * speedScale, reward: Math.round(16 * rewardScale), color: "#f16f8a", r: 15, armor: 0.12 };
       }
       if (kind === "leech") {
-        const maxHp = Math.round(120 * hpScale);
-        return { ...base, kind, hp: maxHp, maxHp, speed: 98 * speedScale, reward: Math.round(10 * rewardScale), color: "#73ffd4", r: 11, coreDamage: 2 };
+        const maxHp = Math.round(200 * hpScale);
+        return { ...base, kind, hp: maxHp, maxHp, speed: 80 * speedScale, reward: Math.round(14 * rewardScale), color: "#73ffd4", r: 11 };
       }
       if (kind === "boss") {
-        const maxHp = Math.round(565 * hpScale);
-        return { ...base, kind, hp: maxHp, maxHp, speed: 51 * speedScale, reward: Math.round(36 * rewardScale), color: "#c972ff", r: 18, armor: 0.18 };
+        const maxHp = Math.round(555 * hpScale);
+        return { ...base, kind, hp: maxHp, maxHp, speed: 44 * speedScale, reward: Math.round(36 * rewardScale), color: "#c972ff", r: 18, armor: 0.28, coreDamage: 2 };
       }
       const maxHp = Math.round(88 * hpScale);
       return { ...base, kind: "basic", hp: maxHp, maxHp, speed: 72 * speedScale, reward: Math.round(9 * rewardScale), color: "#75e9a7", r: 12 };
     }
 
     function startWave(manual = true) {
-      if (state.gameOver) return;
+      if (state.gameOver || state.victory) return;
       state.wave += 1;
       state.waveInProgress = true;
       state.waveReadyGlow = false;
-      state.nextWaveTimer = WAVE_INTERVAL_S;
+      if (state.wave === 100) {
+        state.nextWaveDisabled = true;
+        state.nextWaveTimer = Infinity;
+      } else {
+        state.nextWaveDisabled = false;
+        state.nextWaveTimer = WAVE_INTERVAL_S;
+      }
       if (manual) {
         const now = Date.now();
         if (state.meteorReadyAt > now) {
-          state.meteorReadyAt = Math.max(now, state.meteorReadyAt - 6000);
+          const earlyMs = Math.max(0, state.nextWaveTimer || 0) * 1000;
+          state.meteorReadyAt = Math.max(now, state.meteorReadyAt - earlyMs);
         }
       }
 
-      const count = 11 + state.wave * 2;
+      const count = Math.min(30, 11 + state.wave * 2);
       state.toSpawn += count;
       if (state.spawnTimer <= 0) state.spawnTimer = 0.36;
       state.message = manual
@@ -930,8 +949,8 @@
         return "swarm";
       }
       if (pattern === "armorColumn") {
-        if (idx % 8 === 0) return "tank";
-        if (idx % 3 === 0) return "bulwark";
+        if (idx % 8 === 0) return "bulwark";
+        if (idx % 3 === 0) return "tank";
         return "armored";
       }
       if (pattern === "leechRaid") {
@@ -973,7 +992,7 @@
       if (!state.waveInProgress || state.toSpawn <= 0) return;
       state.spawnTimer -= dt;
       if (state.spawnTimer <= 0) {
-        const total = 11 + state.wave * 2;
+        const total = Math.min(30, 11 + state.wave * 2);
         const spawnedIndex = total - state.toSpawn;
         state.enemies.push(newEnemy(pickEnemyType(state.wave, spawnedIndex), state.wave));
         state.toSpawn -= 1;
@@ -1390,6 +1409,11 @@
     function upgradeTower() {
       if (!state.selectedTower || state.gameOver) return;
       const t = state.selectedTower;
+      if (t.level >= 10) {
+        state.message = "Max level reached.";
+        updateButtons();
+        return;
+      }
       const upgradeCost = getUpgradeCost(t);
       if (state.gold < upgradeCost) {
         state.message = `Need ${upgradeCost} gold to upgrade.`;
@@ -1443,6 +1467,8 @@
       if (now < state.meteorReadyAt) return false;
       state.meteorReadyAt = now + METEOR_CD_MS;
       state.aimingMeteor = false;
+      state.statsMode = "unit";
+      state.selectionLines = [];
       state.meteorEffects.push({ x, y, t: 0, impactAt: 0.34, done: false });
       state.message = "Meteor inbound...";
       updateButtons();
@@ -1451,6 +1477,27 @@
 
     function handleCanvasPress(x, y) {
       if (state.gameOver) return;
+      if (state.victory) {
+        const btns = uiState.victoryButtons || [];
+        for (const btn of btns) {
+          if (hitRect(x, y, btn)) {
+            if (btn.id === "victoryRestart") {
+              resetGame();
+              state.screen = "play";
+              state.message = "Deploy defenses.";
+              state.messageAt = Date.now();
+              startLoop();
+            }
+            if (btn.id === "victoryContinue") {
+              state.victory = false;
+              state.nextWaveDisabled = false;
+              startWave(true);
+            }
+            return;
+          }
+        }
+        return;
+      }
       if (state.screen === "start") {
         if (uiState.startButton && hitRect(x, y, uiState.startButton)) {
           state.screen = "play";
@@ -1539,7 +1586,7 @@
     }
 
     function handleBuildSelect(type) {
-      if (state.gameOver || state.paused) return;
+      if (state.gameOver || state.paused || state.victory) return;
       const t = towerTypes[type];
       if (!t || state.gold < t.cost) return;
       state.selectedBuild = state.selectedBuild === type ? null : type;
@@ -1597,7 +1644,7 @@
       const idx = state.towers.indexOf(state.selectedTower);
       if (idx >= 0) {
         const invested = state.selectedTower.totalInvested || state.selectedTower.cost;
-        const value = Math.floor(invested * 0.6);
+        const value = Math.floor(invested * 0.7);
         state.gold += value;
         state.towers.splice(idx, 1);
         state.selectedTower = null;
@@ -1621,6 +1668,9 @@
       state.selectedBuild = null;
       state.selectedTower = null;
       if (!state.aimingMeteor) state.statsMode = "unit";
+      if (!state.aimingMeteor) {
+        state.selectionLines = [];
+      }
       state.message = state.aimingMeteor ? "Click battlefield to call meteor." : "Meteor canceled.";
       updateButtons();
     }
@@ -1673,6 +1723,7 @@
         state.selectedBuild = null;
         state.aimingMeteor = false;
         state.statsMode = "unit";
+        state.selectionLines = [];
         state.message = "Action canceled.";
         updateButtons();
       }
@@ -1683,6 +1734,19 @@
       if (e.ctrlKey && key === "]") {
         state.gold += 10000;
         state.message = "Cheat gold +10000.";
+        updateHUD();
+        updateButtons();
+        return;
+      }
+      if (e.ctrlKey && key === "'") {
+        state.wave = 100;
+        state.clearedWave = 100;
+        state.waveInProgress = false;
+        state.toSpawn = 0;
+        state.enemies = [];
+        state.nextWaveDisabled = true;
+        state.victory = true;
+        state.message = "Victory forced.";
         updateHUD();
         updateButtons();
         return;
@@ -1723,6 +1787,7 @@
           state.selectedBuild = null;
           state.aimingMeteor = false;
           state.statsMode = "unit";
+          state.selectionLines = [];
           state.message = "Action canceled.";
           updateButtons();
         }
@@ -2350,6 +2415,7 @@
       uiState.buttons = [];
       uiState.buildButtons = [];
       uiState.pauseButtons = [];
+      uiState.victoryButtons = [];
       uiState.startButton = null;
       const layout = getUiLayout();
 
@@ -2445,7 +2511,7 @@
       for (const type of buildList) {
         if (by + itemH > layout.buildY + layout.buildH) break;
         const t = towerTypes[type];
-        const disabled = state.paused || state.gameOver || state.gold < t.cost;
+        const disabled = state.paused || state.gameOver || state.victory || state.gold < t.cost;
         const active = state.selectedBuild === type;
         ctx.save();
         ctx.fillStyle = disabled ? "rgba(9, 16, 26, 0.65)" : "rgba(12, 24, 38, 0.9)";
@@ -2567,6 +2633,7 @@
 
     function drawGameOver() {
       if (!state.gameOver) return;
+      uiState.restartButton = null;
       ctx.save();
       ctx.fillStyle = "rgba(0, 0, 0, 0.52)";
       ctx.fillRect(0, 0, W, H);
@@ -2576,7 +2643,7 @@
       ctx.fillText("Core Lost", W / 2, H / 2 - 18);
       ctx.fillStyle = "#dce8ff";
       ctx.font = "600 18px 'Space Grotesk', sans-serif";
-      ctx.fillText(`Final Score: ${state.score}`, W / 2, H / 2 + 22);
+      ctx.fillText(`Final Score: ${state.score}`, W / 2, H / 2 + 24);
       const bw = 170;
       const bh = 44;
       const bx = W / 2 - bw / 2;
@@ -2591,6 +2658,35 @@
       ctx.fillStyle = "#eef6ff";
       ctx.font = "700 18px 'Space Grotesk', sans-serif";
       ctx.fillText("Restart", W / 2, by + 29);
+      ctx.textAlign = "start";
+      ctx.restore();
+      uiState.restartButton = { x: bx, y: by, w: bw, h: bh };
+    }
+
+    function drawVictory() {
+      if (!state.victory) return;
+      ctx.save();
+      ctx.fillStyle = "rgba(0, 0, 0, 0.45)";
+      ctx.fillRect(0, 0, W, H);
+      ctx.fillStyle = "#9ff2c9";
+      ctx.textAlign = "center";
+      ctx.font = "700 46px 'Bungee', sans-serif";
+      ctx.fillText("Victory", W / 2, H / 2 - 18);
+      ctx.fillStyle = "#dce8ff";
+      ctx.font = "600 18px 'Space Grotesk', sans-serif";
+      ctx.fillText(`Final Score: ${state.score}`, W / 2, H / 2 + 24);
+      const bw = 160;
+      const bh = 38;
+      const gap = 12;
+      const totalW = bw * 2 + gap;
+      const bx = W / 2 - totalW / 2;
+      const by = H / 2 + 46;
+      drawUiButton(bx, by, bw, bh, "Restart", "warn", false);
+      drawUiButton(bx + bw + gap, by, bw, bh, "Continue", "primary", false);
+      uiState.victoryButtons = [
+        { x: bx, y: by, w: bw, h: bh, id: "victoryRestart", disabled: false },
+        { x: bx + bw + gap, y: by, w: bw, h: bh, id: "victoryContinue", disabled: false }
+      ];
       ctx.textAlign = "start";
       ctx.restore();
     }
@@ -2613,11 +2709,11 @@
       const totalW = bw * 2 + gap;
       const bx = W / 2 - totalW / 2;
       const by = H / 2 + 50;
-      drawUiButton(bx, by, bw, bh, "Resume", "primary", false);
-      drawUiButton(bx + bw + gap, by, bw, bh, "Restart", "warn", false);
+      drawUiButton(bx, by, bw, bh, "Restart", "warn", false);
+      drawUiButton(bx + bw + gap, by, bw, bh, "Resume", "primary", false);
       uiState.pauseButtons = [
-        { x: bx, y: by, w: bw, h: bh, id: "resume", disabled: false },
-        { x: bx + bw + gap, y: by, w: bw, h: bh, id: "restart", disabled: false }
+        { x: bx, y: by, w: bw, h: bh, id: "restart", disabled: false },
+        { x: bx + bw + gap, y: by, w: bw, h: bh, id: "resume", disabled: false }
       ];
     }
 
@@ -2645,11 +2741,8 @@
     canvas.addEventListener("mousedown", (e) => {
       if (!state.gameOver) return;
       const p = worldPos(e);
-      const bw = 170;
-      const bh = 44;
-      const bx = W / 2 - bw / 2;
-      const by = H / 2 + 46;
-      if (p.x >= bx && p.x <= bx + bw && p.y >= by && p.y <= by + bh) {
+      const r = uiState.restartButton;
+      if (r && p.x >= r.x && p.x <= r.x + r.w && p.y >= r.y && p.y <= r.y + r.h) {
         resetGame();
         state.screen = "play";
         state.message = "Deploy defenses.";
@@ -2669,9 +2762,11 @@
     }
 
     function step(dt) {
-      if (!state.gameOver && !state.paused && state.screen === "play") {
-        state.nextWaveTimer -= dt;
-        if (state.nextWaveTimer <= 0) startWave(false);
+      if (!state.gameOver && !state.paused && state.screen === "play" && !state.victory) {
+        if (!state.nextWaveDisabled) {
+          state.nextWaveTimer -= dt;
+          if (state.nextWaveTimer <= 0) startWave(false);
+        }
         spawnEnemyBatch(dt);
         updateEnemies(dt);
         updateTowers(dt);
@@ -2694,6 +2789,11 @@
         state.gold += 16 + state.wave * 4;
         state.score += 80 + state.wave * 12;
         state.message = `Wave ${state.wave} cleared. Bonus resources awarded.`;
+        if (state.wave >= 100) {
+          state.victory = true;
+          state.waveReadyGlow = false;
+          state.message = "Victory! Core secured.";
+        }
         updateHUD();
         updateButtons();
       }
@@ -2747,6 +2847,7 @@
       drawCanvasUI();
       drawPaused();
       drawGameOver();
+      drawVictory();
     }
 
     window.render_game_to_text = function renderGameToText() {

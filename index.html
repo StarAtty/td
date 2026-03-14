@@ -27,17 +27,15 @@
       min-height: 100vh;
       font-family: "Space Grotesk", system-ui, sans-serif;
       color: var(--text);
-      background:
-        radial-gradient(circle at 20% 20%, #163153 0%, transparent 48%),
-        radial-gradient(circle at 85% 20%, #2d1945 0%, transparent 42%),
-        linear-gradient(140deg, #050b13, #081425 52%, #0f1424);
+      background: #0f243a;
       display: flex;
       justify-content: center;
-      padding: 16px;
+      padding: 8px;
     }
 
     .page {
-      width: min(1120px, 100%);
+      width: 100%;
+      height: 100%;
       display: flex;
       flex-direction: column;
       gap: 10px;
@@ -47,32 +45,40 @@
       padding: 2px 2px 0;
     }
 
+    .page-head,
+    .hud,
+    .under-canvas,
+    .panel {
+      display: none;
+    }
+
     .shell {
-      width: min(1120px, 100%);
+      width: 100%;
+      height: calc(100vh - 16px);
       display: grid;
-      grid-template-columns: 1fr 290px;
-      gap: 14px;
+      grid-template-columns: 1fr;
+      gap: 0;
     }
 
     .game-wrap {
-      border: 1px solid var(--panel-border);
-      border-radius: 16px;
       overflow: hidden;
       box-shadow: 0 20px 45px rgba(0, 0, 0, 0.45), inset 0 0 24px rgba(49, 255, 230, 0.08);
       background: linear-gradient(160deg, rgba(11, 25, 43, 0.8), rgba(13, 29, 48, 0.95));
       display: flex;
       flex-direction: column;
-      gap: 10px;
-      padding: max(10px, env(safe-area-inset-top)) max(10px, env(safe-area-inset-right)) max(10px, env(safe-area-inset-bottom)) max(10px, env(safe-area-inset-left));
+      gap: 0;
+      padding: max(6px, env(safe-area-inset-top)) max(6px, env(safe-area-inset-right)) max(6px, env(safe-area-inset-bottom)) max(6px, env(safe-area-inset-left));
+      width: 100%;
+      height: 100%;
+      align-items: center;
+      justify-content: center;
     }
 
     canvas {
       width: 100%;
-      height: auto;
+      height: 100%;
       display: block;
-      aspect-ratio: 16 / 9;
       background: linear-gradient(160deg, #0f243a, #101e2f 40%, #102237);
-      border-radius: 12px;
       touch-action: none;
     }
 
@@ -346,81 +352,64 @@
 </head>
 <body>
   <div class="page">
-  <header class="page-head">
-    <h1>TD</h1>
-    <p class="sub">Build towers. Stop the swarm. Don’t let the core crack.</p>
-  </header>
-  <main class="shell">
-    <section class="game-wrap">
-      <div class="hud">
-        <div class="chip">Gold <strong id="gold">120</strong></div>
-        <div class="chip">Core HP <strong id="health">20</strong></div>
-        <div class="chip">Wave <strong id="wave">0</strong></div>
-        <div class="chip">Score <strong id="score">0</strong></div>
-        <div id="statusText" class="chip status-chip"></div>
-        <button id="pause" class="pause-chip" title="Pause (P)">⏸</button>
-      </div>
-      <canvas id="game" width="960" height="560"></canvas>
-      <div class="under-canvas">
-        <div id="selectionStats" class="stats-card"></div>
-        <div class="canvas-actions">
-          <div class="button-row actions">
-            <button id="startWave" class="primary icon-btn" title="Call Wave (Space)">▶</button>
-            <button id="meteor" class="warn icon-btn" title="Meteor (M)">☄</button>
-            <button id="upgrade" class="icon-btn upgrade-btn" title="Upgrade Selected (U)">⇧</button>
-            <button id="sell" class="icon-btn sell-btn" title="Sell Selected">$</button>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <aside class="panel">
-      <p class="group-title">Build Towers</p>
-      <div class="tower-grid">
-        <button data-build="dart" class="tower-option"><span class="tower-art dart"></span><span class="tower-copy"><strong>Dart Node ($50)</strong><span>rapid single-target</span></span></button>
-        <button data-build="scatter" class="tower-option"><span class="tower-art scatter"></span><span class="tower-copy"><strong>Scatter Bloom ($220)</strong><span>shoots multiple projectiles at once</span></span></button>
-        <button data-build="cannon" class="tower-option"><span class="tower-art cannon"></span><span class="tower-copy"><strong>Pulse Cannon ($350)</strong><span>splash blast</span></span></button>
-        <button data-build="frost" class="tower-option"><span class="tower-art frost"></span><span class="tower-copy"><strong>Cryo Prism ($400)</strong><span>slows enemies</span></span></button>
-        <button data-build="storm" class="tower-option"><span class="tower-art storm"></span><span class="tower-copy"><strong>Storm Arc ($500)</strong><span>long-range with light chain arcs</span></span></button>
-        <button data-build="venom" class="tower-option"><span class="tower-art venom"></span><span class="tower-copy"><strong>Venom Spire ($420)</strong><span>poison over time</span></span></button>
-        <button data-build="ion" class="tower-option"><span class="tower-art ion"></span><span class="tower-copy"><strong>Ion Lattice ($460)</strong><span>marked damage amplifier</span></span></button>
-        <button data-build="ember" class="tower-option"><span class="tower-art ember"></span><span class="tower-copy"><strong>Ember Forge ($520)</strong><span>slow molten shots + burning field</span></span></button>
-        <button data-build="rail" class="tower-option"><span class="tower-art rail"></span><span class="tower-copy"><strong>Rail Lance ($560)</strong><span>burst shots pierce through enemies</span></span></button>
-        <button data-build="mortar" class="tower-option"><span class="tower-art mortar"></span><span class="tower-copy"><strong>Siege Mortar ($650)</strong><span>huge long-range area blast</span></span></button>
-      </div>
-
-      <p class="tip">
-        Build on highlighted pads only. Select a tower and press ⇧ to upgrade. Waves auto-start on a timer, but ▶ can call early.
-      </p>
-    </aside>
-  </main>
+    <main class="shell">
+      <section class="game-wrap">
+        <canvas id="game" width="960" height="560"></canvas>
+      </section>
+    </main>
   </div>
   <script>
     const canvas = document.getElementById("game");
     const ctx = canvas.getContext("2d");
-    const hud = {
-      gold: document.getElementById("gold"),
-      health: document.getElementById("health"),
-      wave: document.getElementById("wave"),
-      score: document.getElementById("score")
-    };
-
-    const towerButtons = Array.from(document.querySelectorAll("[data-build]"));
+    const towerOrder = ["dart", "scatter", "cannon", "frost", "storm", "venom", "ion", "ember", "rail", "mortar"];
+    const towerButtons = towerOrder.map((type) => ({ dataset: { build: type } }));
     const towerHotkeys = [
       ["1", "q"], ["2", "w"], ["3", "e"], ["4", "r"], ["5", "a"],
       ["6", "s"], ["7", "d"], ["8", "f"], ["9", "z"], ["0", "x"]
     ];
-    const startWaveBtn = document.getElementById("startWave");
-    const pauseBtn = document.getElementById("pause");
-    const meteorBtn = document.getElementById("meteor");
-    const upgradeBtn = document.getElementById("upgrade");
-    const sellBtn = document.getElementById("sell");
-    const selectionStats = document.getElementById("selectionStats");
-    const statusText = document.getElementById("statusText");
+    const startWaveBtn = { disabled: false, title: "", textContent: "" };
+    const pauseBtn = { disabled: false, title: "", textContent: "" };
+    const meteorBtn = { disabled: false, title: "", textContent: "" };
+    const upgradeBtn = { disabled: false, title: "", textContent: "" };
+    const sellBtn = { disabled: false, title: "", textContent: "" };
     let lastStatusMessage = "";
 
-    const W = canvas.width;
-    const H = canvas.height;
+    const BASE_W = 960;
+    const BASE_H = 560;
+    let W = BASE_W;
+    let H = BASE_H;
+    let scaleX = 1;
+    let scaleY = 1;
+    let dpr = window.devicePixelRatio || 1;
+
+    function resizeCanvas() {
+      const wrap = canvas.parentElement;
+      const inFullscreen = document.fullscreenElement === canvas;
+      const availW = inFullscreen ? window.innerWidth : (wrap ? wrap.clientWidth : window.innerWidth);
+      const availH = inFullscreen ? window.innerHeight : (wrap ? wrap.clientHeight : window.innerHeight);
+      const aspect = BASE_W / BASE_H;
+      let cssW = availW;
+      let cssH = availH;
+      if (!inFullscreen) {
+        if (cssW / cssH > aspect) {
+          cssW = cssH * aspect;
+        } else {
+          cssH = cssW / aspect;
+        }
+      }
+      dpr = window.devicePixelRatio || 1;
+      canvas.style.width = `${cssW}px`;
+      canvas.style.height = `${cssH}px`;
+      canvas.width = Math.round(cssW * dpr);
+      canvas.height = Math.round(cssH * dpr);
+      scaleX = canvas.width / BASE_W;
+      scaleY = canvas.height / BASE_H;
+      ctx.imageSmoothingEnabled = true;
+    }
+
+    window.addEventListener("resize", resizeCanvas);
+    document.addEventListener("fullscreenchange", resizeCanvas);
+    resizeCanvas();
     const grid = 48;
     const PAD_HALF = 22;
     const METEOR_CD_MS = 120000;
@@ -428,6 +417,7 @@
     const METEOR_RADIUS = 56;
     const METEOR_DAMAGE = 180;
     const METEOR_WAVE_BONUS = 24;
+    const uiState = { buttons: [], buildButtons: [], pauseButtons: [], startButton: null };
 
     const path = [
       { x: -48, y: 432 },
@@ -453,6 +443,7 @@
     const towerTypes = {
       dart: {
         name: "Dart Node",
+        desc: "Rapid single-target shots.",
         cost: 50,
         range: 134,
         fireRate: 0.22,
@@ -462,6 +453,7 @@
       },
       cannon: {
         name: "Pulse Cannon",
+        desc: "Heavy splash damage.",
         cost: 350,
         range: 160,
         fireRate: 1.12,
@@ -472,6 +464,7 @@
       },
       frost: {
         name: "Cryo Prism",
+        desc: "Slows targets with chilled hits.",
         cost: 400,
         range: 156,
         fireRate: 0.76,
@@ -483,6 +476,7 @@
       },
       rail: {
         name: "Rail Lance",
+        desc: "Long-range pierce bursts.",
         cost: 3200,
         range: 300,
         fireRate: 0.58,
@@ -494,6 +488,7 @@
       },
       venom: {
         name: "Venom Spire",
+        desc: "Poisons targets over time.",
         cost: 800,
         range: 196,
         fireRate: 0.3,
@@ -505,6 +500,7 @@
       },
       ember: {
         name: "Ember Forge",
+        desc: "Molten shots and Burning field.",
         cost: 2200,
         range: 196,
         fireRate: 1.28,
@@ -520,6 +516,7 @@
       },
       storm: {
         name: "Storm Arc",
+        desc: "Lightning chains across enemies.",
         cost: 500,
         range: 202,
         fireRate: 0.72,
@@ -532,6 +529,7 @@
       },
       mortar: {
         name: "Siege Mortar",
+        desc: "Long-range explosive shells.",
         cost: 6000,
         range: 286,
         fireRate: 1.95,
@@ -542,6 +540,7 @@
       },
       ion: {
         name: "Ion Lattice",
+        desc: "Marks targets to amplify damage.",
         cost: 1000,
         range: 216,
         fireRate: 0.62,
@@ -553,6 +552,7 @@
       },
       scatter: {
         name: "Scatter Bloom",
+        desc: "Fires multiple projectiles at once.",
         cost: 220,
         range: 145,
         fireRate: 0.12,
@@ -564,21 +564,53 @@
       }
     };
 
-    function syncTowerGridFromTypes() {
-      towerButtons.forEach((btn) => {
-        const type = btn.dataset.build;
-        const t = towerTypes[type];
-        if (!t) return;
-        const title = btn.querySelector("strong");
-        if (title) title.textContent = `${t.name} ($${t.cost})`;
-        const i = towerButtons.indexOf(btn);
-        const keys = towerHotkeys[i] || [];
-        btn.title = keys.length ? `${t.name} [${keys.join("/")}]` : t.name;
-      });
-    }
-
     let state = null;
     let isLoopRunning = false;
+
+    function getUiLayout() {
+      const topBarH = 30;
+      const sideW = 212;
+      const bottomH = 58;
+      const pad = 6;
+      return {
+        topBarH,
+        sideW,
+        bottomH,
+        pad,
+        buildX: W - sideW + pad,
+        buildY: topBarH + pad,
+        buildW: sideW - pad * 2,
+        buildH: H - topBarH - bottomH - pad * 2,
+        actionsY: H - bottomH + 4,
+        actionsH: bottomH - 12
+      };
+    }
+
+    function getWorldTransform() {
+      const layout = getUiLayout();
+      const playX = 0;
+      const playY = layout.topBarH;
+      const playW = W - layout.sideW;
+      const playH = H - layout.bottomH - layout.topBarH;
+      const scale = Math.min(playW / BASE_W, playH / BASE_H);
+      const ox = playX + (playW - BASE_W * scale) / 2;
+      const oy = playY + (playH - BASE_H * scale) / 2;
+      return { scale, ox, oy, playX, playY, playW, playH };
+    }
+
+    function screenToWorld(sx, sy) {
+      const wt = state?.worldTransform || getWorldTransform();
+      const inside = sx >= wt.playX && sx <= wt.playX + wt.playW && sy >= wt.playY && sy <= wt.playY + wt.playH;
+      return {
+        x: (sx - wt.ox) / wt.scale,
+        y: (sy - wt.oy) / wt.scale,
+        inside
+      };
+    }
+
+    function setSelectionLines(lines) {
+      state.selectionLines = lines;
+    }
 
     function resetGame() {
       state = {
@@ -597,6 +629,7 @@
         particles: [],
         hazards: [],
         meteorEffects: [],
+        selectionLines: [],
         waveInProgress: false,
         toSpawn: 0,
         spawnTimer: 0,
@@ -608,6 +641,7 @@
         paused: false,
         messageAt: Date.now(),
         gameOver: false,
+        screen: "start",
         message: "Set up quickly. First wave auto-starts in 35s."
       };
       updateHUD();
@@ -615,19 +649,14 @@
     }
 
     function updateHUD() {
-      hud.gold.textContent = Math.floor(state.gold);
-      hud.health.textContent = state.health;
-      hud.wave.textContent = state.wave;
-      hud.score.textContent = state.score;
+      return;
     }
 
     function updateButtons() {
-      towerButtons.forEach((btn) => {
-        const type = btn.dataset.build;
-        btn.classList.toggle("active", state.selectedBuild === type);
-        btn.disabled = state.paused || (!state.gameOver && state.gold < towerTypes[type].cost);
-        btn.classList.toggle("inactive", state.gameOver);
-      });
+      if (state.message !== lastStatusMessage) {
+        lastStatusMessage = state.message;
+        state.messageAt = Date.now();
+      }
       sellBtn.disabled = state.paused || !state.selectedTower || state.gameOver;
       const upgradeCostNow = state.selectedTower ? getUpgradeCost(state.selectedTower) : Infinity;
       upgradeBtn.disabled = state.paused || !state.selectedTower || state.gameOver || state.gold < upgradeCostNow;
@@ -637,7 +666,6 @@
       startWaveBtn.title = state.waveInProgress
         ? `Next wave in ${secs}s (Space/N)`
         : `Call Wave (${secs}s) (Space/N)`;
-      startWaveBtn.classList.toggle("pulse", state.waveReadyGlow && !state.gameOver);
       pauseBtn.disabled = false;
       pauseBtn.textContent = state.gameOver ? "↻" : (state.paused ? "▶" : "⏸");
       pauseBtn.title = state.gameOver ? "Restart (P)" : (state.paused ? "Resume (P)" : "Pause (P)");
@@ -654,7 +682,6 @@
       meteorBtn.title = state.aimingMeteor
         ? "Cancel Meteor (Esc/M)"
         : `Meteor (M) DMG ${meteorDamageNow} R${METEOR_RADIUS} CD ${METEOR_CD_MS / 1000}s`;
-      meteorBtn.classList.toggle("pulse", !state.gameOver && state.waveInProgress && Date.now() >= state.meteorReadyAt && !state.aimingMeteor);
       if (state.selectedTower) {
         const c = getUpgradeCost(state.selectedTower);
         upgradeBtn.title = `Upgrade (U) Lv.${state.selectedTower.level} ($${c})`;
@@ -668,15 +695,6 @@
         sellBtn.textContent = "$";
         sellBtn.title = "Sell Selected (V)";
       }
-      const msg = state.message || "";
-      if (msg !== lastStatusMessage) {
-        lastStatusMessage = msg;
-        state.messageAt = Date.now();
-      }
-      const age = (Date.now() - (state.messageAt || Date.now())) / 1000;
-      const opacity = msg ? (age < 1.8 ? 1 : Math.max(0, 1 - (age - 1.8) / 0.8)) : 0;
-      statusText.textContent = msg;
-      statusText.style.opacity = `${opacity}`;
       updateSelectionStats();
     }
 
@@ -715,8 +733,10 @@
       if (state.statsMode === "meteor") {
         const cd = Math.max(0, Math.ceil((state.meteorReadyAt - Date.now()) / 1000));
         const meteorDamageNow = METEOR_DAMAGE + state.wave * METEOR_WAVE_BONUS;
-        selectionStats.innerHTML =
-          `METEOR | DMG ${meteorDamageNow} | Radius ${METEOR_RADIUS}<br><span class=\"upgrade-preview\">Cooldown ${cd}s</span>`;
+        setSelectionLines([
+          { text: `METEOR | DMG ${meteorDamageNow} | Radius ${METEOR_RADIUS}`, tone: "base" },
+          { text: `Cooldown ${cd}s`, tone: "upgrade" }
+        ]);
         return;
       }
 
@@ -743,8 +763,10 @@
         if (next.chain) nextExtra += ` | Chain x${next.chain}`;
         if (next.markAmp) nextExtra += ` | Mark +${Math.round(Number.parseInt(next.markAmp, 10) - 100)}%`;
         if (next.burstPierce) nextExtra += ` | Burst Pierce ${next.burstPierce}`;
-        selectionStats.innerHTML =
-          `${t.name} Lv.${t.level} | DMG ${Math.round(t.damage)} | DPS ${dps} | Range ${Math.round(t.range)} | Rate ${shotsPerSec}/s${extra}<br><span class=\"upgrade-preview\">Next Lv.${next.level} | DMG ${next.damage} | DPS ${next.dps} | Range ${next.range} | Rate ${next.rate}/s${nextExtra}</span>`;
+        setSelectionLines([
+          { text: `${t.name} Lv.${t.level} | DMG ${Math.round(t.damage)} | DPS ${dps} | Range ${Math.round(t.range)} | Rate ${shotsPerSec}/s${extra}`, tone: "base" },
+          { text: `Next Lv.${next.level} | DMG ${next.damage} | DPS ${next.dps} | Range ${next.range} | Rate ${next.rate}/s${nextExtra}`, tone: "upgrade" }
+        ]);
         return;
       }
 
@@ -773,8 +795,10 @@
         if (next.chain) nextExtra += ` | Chain x${next.chain}`;
         if (next.markAmp) nextExtra += ` | Mark +${Math.round(Number.parseInt(next.markAmp, 10) - 100)}%`;
         if (next.burstPierce) nextExtra += ` | Burst Pierce ${next.burstPierce}`;
-        selectionStats.innerHTML =
-          `${t.name} ($${t.cost}) | DMG ${Math.round(t.damage)} | DPS ${dps} | Range ${Math.round(t.range)} | Rate ${shotsPerSec}/s${extra}<br><span class=\"upgrade-preview\">Next Lv.${next.level} | DMG ${next.damage} | DPS ${next.dps} | Range ${next.range} | Rate ${next.rate}/s${nextExtra}</span>`;
+        setSelectionLines([
+          { text: `${t.name} ($${t.cost}) | DMG ${Math.round(t.damage)} | DPS ${dps} | Range ${Math.round(t.range)} | Rate ${shotsPerSec}/s${extra}`, tone: "base" },
+          { text: `Next Lv.${next.level} | DMG ${next.damage} | DPS ${next.dps} | Range ${next.range} | Rate ${next.rate}/s${nextExtra}`, tone: "upgrade" }
+        ]);
         return;
       }
 
@@ -783,12 +807,13 @@
         let extra = "";
         if (e.armor) extra += ` | Armor ${Math.round(e.armor * 100)}%`;
         if (e.coreDamage && e.coreDamage > 1) extra += ` | Core DMG ${e.coreDamage}`;
-        selectionStats.textContent =
-          `${e.kind.toUpperCase()} | HP ${Math.max(0, Math.round(e.hp))}/${e.maxHp} | SPD ${Math.round(e.speed)} | Bounty ${e.reward}${extra}`;
+        setSelectionLines([
+          { text: `${e.kind.toUpperCase()} | HP ${Math.max(0, Math.round(e.hp))}/${e.maxHp} | SPD ${Math.round(e.speed)} | Bounty ${e.reward}${extra}`, tone: "base" }
+        ]);
         return;
       }
 
-      selectionStats.textContent = "";
+      setSelectionLines([]);
     }
 
     function newEnemy(kind, wave) {
@@ -1260,11 +1285,9 @@
 
     function worldPos(evt) {
       const r = canvas.getBoundingClientRect();
-      const sx = canvas.width / r.width;
-      const sy = canvas.height / r.height;
       return {
-        x: (evt.clientX - r.left) * sx,
-        y: (evt.clientY - r.top) * sy
+        x: ((evt.clientX - r.left) / r.width) * BASE_W,
+        y: ((evt.clientY - r.top) / r.height) * BASE_H
       };
     }
 
@@ -1396,20 +1419,54 @@
 
     function handleCanvasPress(x, y) {
       if (state.gameOver) return;
-      if (state.paused) {
-        pauseBtn.click();
+      if (state.screen === "start") {
+        if (uiState.startButton && hitRect(x, y, uiState.startButton)) {
+          state.screen = "play";
+          state.message = "Deploy defenses.";
+          state.messageAt = Date.now();
+          updateButtons();
+        }
         return;
       }
-      const gx = Math.round(x / grid) * grid;
-      const gy = Math.round(y / grid) * grid;
+      if (state.paused) {
+        for (const btn of uiState.pauseButtons) {
+          if (hitRect(x, y, btn) && !btn.disabled) {
+            handleUiAction(btn.id);
+            return;
+          }
+        }
+        for (const btn of uiState.buttons) {
+          if ((btn.id === "pause" || btn.id === "fullscreen") && hitRect(x, y, btn)) {
+            handleUiAction(btn.id);
+            return;
+          }
+        }
+        return;
+      }
+      for (const btn of uiState.buttons) {
+        if (hitRect(x, y, btn) && !btn.disabled) {
+          handleUiAction(btn.id);
+          return;
+        }
+      }
+      for (const btn of uiState.buildButtons) {
+        if (hitRect(x, y, btn) && !btn.disabled) {
+          handleBuildSelect(btn.type);
+          return;
+        }
+      }
+      const world = screenToWorld(x, y);
+      if (!world.inside) return;
+      const gx = Math.round(world.x / grid) * grid;
+      const gy = Math.round(world.y / grid) * grid;
 
       if (state.aimingMeteor) {
-        castMeteor(x, y);
+        castMeteor(world.x, world.y);
         return;
       }
 
-      const clickedTower = towerAt(x, y);
-      const clickedEnemy = enemyAt(x, y);
+      const clickedTower = towerAt(world.x, world.y);
+      const clickedEnemy = enemyAt(world.x, world.y);
       if (clickedEnemy && !state.selectedBuild) {
         state.selectedEnemy = clickedEnemy;
         state.selectedTower = null;
@@ -1445,6 +1502,120 @@
       }
     }
 
+    function hitRect(x, y, r) {
+      return x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h;
+    }
+
+    function handleBuildSelect(type) {
+      if (state.gameOver || state.paused) return;
+      const t = towerTypes[type];
+      if (!t || state.gold < t.cost) return;
+      state.selectedBuild = state.selectedBuild === type ? null : type;
+      if (state.selectedBuild) {
+        state.selectedTower = null;
+        state.selectedEnemy = null;
+        state.statsMode = "unit";
+      }
+      updateButtons();
+    }
+
+    function handleUiAction(id) {
+      if (id === "startWave") startWave();
+      if (id === "pause") togglePause();
+      if (id === "meteor") toggleMeteor();
+      if (id === "upgrade") upgradeTower();
+      if (id === "sell") sellSelected();
+      if (id === "resume") togglePause();
+      if (id === "restart") restartFromPause();
+      if (id === "fullscreen") toggleFullscreen();
+    }
+
+    function updateHoverBuild() {
+      if (state.screen !== "play") {
+        state.hoverBuild = null;
+        return;
+      }
+      const layout = getUiLayout();
+      const x = mouse.screenX;
+      const y = mouse.screenY;
+      if (
+        x < layout.buildX ||
+        x > layout.buildX + layout.buildW ||
+        y < layout.buildY ||
+        y > layout.buildY + layout.buildH
+      ) {
+        state.hoverBuild = null;
+        return;
+      }
+      const itemH = 41;
+      const idx = Math.floor((y - layout.buildY) / itemH);
+      const type = towerOrder[idx];
+      state.hoverBuild = type || null;
+      state.statsMode = "unit";
+    }
+
+    function sellSelected() {
+      if (!state.selectedTower) return;
+      const idx = state.towers.indexOf(state.selectedTower);
+      if (idx >= 0) {
+        const invested = state.selectedTower.totalInvested || state.selectedTower.cost;
+        const value = Math.floor(invested * 0.6);
+        state.gold += value;
+        state.towers.splice(idx, 1);
+        state.selectedTower = null;
+        state.message = `Tower sold for ${value} gold.`;
+        updateHUD();
+        updateButtons();
+      }
+    }
+
+    function toggleMeteor() {
+      if (state.gameOver) return;
+      state.statsMode = "meteor";
+      const now = Date.now();
+      if (now < state.meteorReadyAt) {
+        const remain = Math.ceil((state.meteorReadyAt - now) / 1000);
+        state.message = `Meteor cooldown: ${remain}s`;
+        updateButtons();
+        return;
+      }
+      state.aimingMeteor = !state.aimingMeteor;
+      state.selectedBuild = null;
+      state.selectedTower = null;
+      if (!state.aimingMeteor) state.statsMode = "unit";
+      state.message = state.aimingMeteor ? "Click battlefield to call meteor." : "Meteor canceled.";
+      updateButtons();
+    }
+
+    function togglePause() {
+      if (state.gameOver) {
+        resetGame();
+        startLoop();
+        return;
+      }
+      state.paused = !state.paused;
+      state.message = state.paused ? "Paused." : "Resumed.";
+      updateButtons();
+    }
+
+    function restartFromPause() {
+      resetGame();
+      state.screen = "play";
+      state.message = "Deploy defenses.";
+      state.messageAt = Date.now();
+      startLoop();
+    }
+
+    function toggleFullscreen() {
+      if (!document.fullscreenElement) {
+        if (canvas.requestFullscreen) {
+          canvas.requestFullscreen({ navigationUI: "hide" }).catch(() => {});
+        }
+      } else {
+        document.exitFullscreen().catch(() => {});
+      }
+    }
+
     canvas.addEventListener("click", (evt) => {
       const { x, y } = worldPos(evt);
       handleCanvasPress(x, y);
@@ -1469,90 +1640,28 @@
       }
     });
 
-    towerButtons.forEach((btn) => {
-      btn.addEventListener("click", () => {
-        if (state.gameOver) return;
-        const next = btn.dataset.build;
-        state.selectedBuild = state.selectedBuild === next ? null : next;
-        if (state.selectedBuild) {
-          state.selectedTower = null;
-          state.selectedEnemy = null;
-          state.statsMode = "unit";
-        }
-        updateButtons();
-      });
-      btn.addEventListener("mouseenter", () => {
-        state.hoverBuild = btn.dataset.build;
-        state.statsMode = "unit";
-        updateButtons();
-      });
-      btn.addEventListener("mouseleave", () => {
-        if (state.hoverBuild === btn.dataset.build) {
-          state.hoverBuild = null;
-          updateButtons();
-        }
-      });
-    });
-
-    sellBtn.addEventListener("click", () => {
-      if (!state.selectedTower) return;
-      const idx = state.towers.indexOf(state.selectedTower);
-      if (idx >= 0) {
-        const invested = state.selectedTower.totalInvested || state.selectedTower.cost;
-        const value = Math.floor(invested * 0.6);
-        state.gold += value;
-        state.towers.splice(idx, 1);
-        state.selectedTower = null;
-        state.message = `Tower sold for ${value} gold.`;
-        updateHUD();
-        updateButtons();
-      }
-    });
-
-    meteorBtn.addEventListener("click", () => {
-      if (state.gameOver) return;
-      state.statsMode = "meteor";
-      const now = Date.now();
-      if (now < state.meteorReadyAt) {
-        const remain = Math.ceil((state.meteorReadyAt - now) / 1000);
-        state.message = `Meteor cooldown: ${remain}s`;
-        updateButtons();
-        return;
-      }
-      state.aimingMeteor = !state.aimingMeteor;
-      state.selectedBuild = null;
-      state.selectedTower = null;
-      if (!state.aimingMeteor) state.statsMode = "unit";
-      state.message = state.aimingMeteor ? "Click battlefield to call meteor." : "Meteor canceled.";
-      updateButtons();
-    });
-    pauseBtn.addEventListener("click", () => {
-      if (state.gameOver) {
-        resetGame();
-        startLoop();
-        return;
-      }
-      state.paused = !state.paused;
-      state.message = state.paused ? "Paused." : "Resumed.";
-      updateButtons();
-    });
-
-    startWaveBtn.addEventListener("click", startWave);
-    upgradeBtn.addEventListener("click", upgradeTower);
     window.addEventListener("keydown", (e) => {
       const key = e.key.toLowerCase();
+      if (key === "f") {
+        toggleFullscreen();
+        return;
+      }
       if (key === "m") {
-        meteorBtn.click();
+        toggleMeteor();
         return;
       }
       if (key === "p") {
-        pauseBtn.click();
+        togglePause();
         return;
       }
       if (state.paused) return;
       for (let i = 0; i < towerHotkeys.length; i++) {
         if (towerHotkeys[i].includes(key) && towerButtons[i]) {
-          towerButtons[i].click();
+          const type = towerButtons[i].dataset.build;
+          const t = towerTypes[type];
+          if (!t) return;
+          if (state.gameOver || state.paused || state.gold < t.cost) return;
+          handleBuildSelect(type);
           return;
         }
       }
@@ -1561,7 +1670,7 @@
         return;
       }
       if (key === "v") {
-        sellBtn.click();
+        sellSelected();
         return;
       }
       if (key === "escape") {
@@ -1602,22 +1711,6 @@
 
     function drawMapDecor() {
       ctx.save();
-      const rocks = [
-        { x: 180, y: 120, r: 34 },
-        { x: 780, y: 420, r: 42 },
-        { x: 600, y: 360, r: 28 },
-        { x: 870, y: 300, r: 30 },
-        { x: 180, y: 520, r: 26 }
-      ];
-      for (const rock of rocks) {
-        const g = ctx.createRadialGradient(rock.x - 6, rock.y - 7, 4, rock.x, rock.y, rock.r);
-        g.addColorStop(0, "rgba(130, 180, 230, 0.22)");
-        g.addColorStop(1, "rgba(26, 48, 72, 0.15)");
-        ctx.fillStyle = g;
-        ctx.beginPath();
-        ctx.arc(rock.x, rock.y, rock.r, 0, Math.PI * 2);
-        ctx.fill();
-      }
       ctx.strokeStyle = "rgba(95, 162, 255, 0.14)";
       ctx.lineWidth = 1;
       ctx.beginPath();
@@ -2086,11 +2179,10 @@
     function drawPlacementGhost() {
       if (!state.selectedBuild || state.gameOver || state.aimingMeteor) return;
       const t = towerTypes[state.selectedBuild];
-      const pos = mouse;
-      if (!pos) return;
+      if (!mouse || !mouse.inside) return;
 
-      const x = Math.round(pos.x / grid) * grid;
-      const y = Math.round(pos.y / grid) * grid;
+      const x = Math.round(mouse.x / grid) * grid;
+      const y = Math.round(mouse.y / grid) * grid;
       const ok = canPlace(x, y) && state.gold >= t.cost;
 
       ctx.save();
@@ -2110,7 +2202,7 @@
     }
 
     function drawMeteorMarker() {
-      if (!state.aimingMeteor || !mouse) return;
+      if (!state.aimingMeteor || !mouse || !mouse.inside) return;
       const now = Date.now();
       if (now < state.meteorReadyAt) return;
       const x = mouse.x;
@@ -2129,6 +2221,237 @@
       ctx.lineTo(x, y + 14);
       ctx.stroke();
       ctx.restore();
+    }
+
+    function colorToRgba(color, alpha) {
+      if (!color || color[0] !== "#" || color.length !== 7) return color;
+      const r = parseInt(color.slice(1, 3), 16);
+      const g = parseInt(color.slice(3, 5), 16);
+      const b = parseInt(color.slice(5, 7), 16);
+      return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+    }
+
+    function darkenRgba(color, alpha, factor = 0.7) {
+      const match = /^rgba\((\d+),\s*(\d+),\s*(\d+),\s*([0-9.]+)\)$/.exec(color || "");
+      if (!match) return color;
+      const r = Math.round(Number(match[1]) * factor);
+      const g = Math.round(Number(match[2]) * factor);
+      const b = Math.round(Number(match[3]) * factor);
+      return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+    }
+
+    function getButtonStyle(kind, disabled) {
+      const styles = {
+        base: { fill: ["rgba(17, 41, 68, 0.9)", "rgba(10, 27, 45, 0.9)"], stroke: "rgba(149, 194, 255, 0.45)" },
+        primary: { fill: ["#1f5f94", "#194673"], stroke: "rgba(125, 203, 255, 0.6)" },
+        warn: { fill: ["#653253", "#49253b"], stroke: "rgba(255, 143, 181, 0.6)" },
+        upgrade: { fill: ["#9a5a1d", "#6f3f12"], stroke: "rgba(255, 185, 112, 0.7)" },
+        sell: { fill: ["#a68f1f", "#796713"], stroke: "rgba(255, 234, 129, 0.7)" }
+      };
+      const palette = styles[kind] || styles.base;
+      if (disabled) {
+        const dark = palette.fill[1];
+        const darkFill = dark.startsWith("#") ? colorToRgba(dark, 0.78) : dark;
+        const darkStroke = darkenRgba(palette.stroke, 0.55);
+        return { fill: [darkFill, darkFill], stroke: darkStroke || palette.stroke, text: "#8b9ab1" };
+      }
+      return { ...palette, text: "#e8f1ff" };
+    }
+
+    function drawUiButton(x, y, w, h, label, kind, disabled, glow = false) {
+      const style = getButtonStyle(kind, disabled);
+      const grad = ctx.createLinearGradient(x, y, x, y + h);
+      grad.addColorStop(0, style.fill[0]);
+      grad.addColorStop(1, style.fill[1]);
+      ctx.save();
+      if (glow) {
+        ctx.shadowColor = "rgba(255, 179, 71, 0.6)";
+        ctx.shadowBlur = 18;
+      }
+      ctx.fillStyle = grad;
+      ctx.strokeStyle = style.stroke;
+      ctx.lineWidth = disabled ? 1.2 : 1.6;
+      ctx.beginPath();
+      ctx.rect(x, y, w, h);
+      ctx.fill();
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = style.text || "#e8f1ff";
+      ctx.font = "700 13px 'Space Grotesk', sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText(label, x + w / 2, y + h / 2 + 4);
+      ctx.textAlign = "start";
+      ctx.restore();
+    }
+
+    function drawCanvasUI() {
+      uiState.buttons = [];
+      uiState.buildButtons = [];
+      uiState.pauseButtons = [];
+      uiState.startButton = null;
+      const layout = getUiLayout();
+
+      if (state.screen === "start") {
+        ctx.save();
+        ctx.fillStyle = "rgba(6, 12, 20, 0.78)";
+        ctx.fillRect(0, 0, W, H);
+        ctx.fillStyle = "#d9f0ff";
+        ctx.font = "700 52px 'Bungee', sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText("TD", W / 2, H / 2 - 40);
+        ctx.fillStyle = "#b6c8e3";
+        ctx.font = "600 16px 'Space Grotesk', sans-serif";
+        ctx.fillText("Place towers. Stop the enemies. Protect the core.", W / 2, H / 2 - 10);
+        const bw = 200;
+        const bh = 46;
+        const bx = W / 2 - bw / 2;
+        const by = H / 2 + 16;
+        ctx.fillStyle = "rgba(42, 112, 168, 0.9)";
+        ctx.strokeStyle = "rgba(180, 222, 255, 0.9)";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.rect(bx, by, bw, bh);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = "#eef6ff";
+        ctx.font = "700 18px 'Space Grotesk', sans-serif";
+        ctx.fillText("Start", W / 2, by + 30);
+        ctx.textAlign = "start";
+        uiState.startButton = { x: bx, y: by, w: bw, h: bh };
+        ctx.restore();
+        return;
+      }
+
+      ctx.save();
+      ctx.fillStyle = "rgba(7, 16, 28, 0.78)";
+      ctx.fillRect(0, 0, W, layout.topBarH);
+      ctx.strokeStyle = "rgba(170, 210, 255, 0.6)";
+      ctx.lineWidth = 1.4;
+      ctx.beginPath();
+      ctx.moveTo(0, layout.topBarH - 0.5);
+      ctx.lineTo(W, layout.topBarH - 0.5);
+      ctx.stroke();
+      ctx.font = "600 12px 'Space Grotesk', sans-serif";
+      ctx.fillStyle = "#ffd85a";
+      ctx.fillText(`Gold ${Math.floor(state.gold)}`, layout.pad + 4, 20);
+      ctx.fillStyle = "#ff6a78";
+      ctx.fillText(`HP ${state.health}`, layout.pad + 90, 20);
+      ctx.fillStyle = "#cbe3ff";
+      ctx.fillText(`Wave ${state.wave}`, layout.pad + 150, 20);
+      ctx.fillText(`Score ${state.score}`, layout.pad + 220, 20);
+
+      const btnW = 30;
+      const btnH = 20;
+      const btnGap = 6;
+      const fsX = W - layout.pad - btnW;
+      const pauseX = fsX - btnGap - btnW;
+      const btnY = 6;
+      const fsLabel = document.fullscreenElement ? "⤡" : "⤢";
+      drawUiButton(pauseX, btnY, btnW, btnH, pauseBtn.textContent, "base", false);
+      drawUiButton(fsX, btnY, btnW, btnH, fsLabel, "base", false);
+      uiState.buttons.push({ x: pauseX, y: btnY, w: btnW, h: btnH, id: "pause", disabled: false });
+      uiState.buttons.push({ x: fsX, y: btnY, w: btnW, h: btnH, id: "fullscreen", disabled: false });
+
+      const msg = state.message || "";
+      const age = (Date.now() - (state.messageAt || Date.now())) / 1000;
+      const opacity = msg ? (age < 1.4 ? 1 : Math.max(0, 1 - (age - 1.4) / 0.6)) : 0;
+      ctx.globalAlpha = opacity;
+      ctx.textAlign = "right";
+      ctx.fillStyle = "#cfe3ff";
+      ctx.fillText(msg, pauseX - 8, 20);
+      ctx.textAlign = "start";
+      ctx.globalAlpha = 1;
+      ctx.restore();
+
+      const buildList = towerButtons.map((btn) => btn.dataset.build);
+      const itemH = 41;
+      const headerH = 26;
+      let by = layout.buildY;
+      ctx.save();
+      ctx.fillStyle = "rgba(12, 26, 40, 0.9)";
+      ctx.beginPath();
+      ctx.rect(layout.buildX, by, layout.buildW, headerH);
+      ctx.fill();
+      ctx.fillStyle = "#cfe4ff";
+      ctx.font = "700 13px 'Space Grotesk', sans-serif";
+      ctx.textBaseline = "middle";
+      ctx.fillText("Build Towers", layout.buildX, by + headerH / 2);
+      ctx.textBaseline = "alphabetic";
+      ctx.restore();
+      by += headerH + 6;
+      for (const type of buildList) {
+        if (by + itemH > layout.buildY + layout.buildH) break;
+        const t = towerTypes[type];
+        const disabled = state.paused || state.gameOver || state.gold < t.cost;
+        const active = state.selectedBuild === type;
+        ctx.save();
+        ctx.fillStyle = disabled ? "rgba(9, 16, 26, 0.65)" : "rgba(12, 24, 38, 0.9)";
+        if (active) ctx.fillStyle = "rgba(32, 54, 74, 0.92)";
+        ctx.strokeStyle = active ? "rgba(129, 244, 149, 0.95)" : "rgba(160, 200, 255, 0.5)";
+        ctx.lineWidth = active ? 1.6 : 1.2;
+        ctx.beginPath();
+        ctx.rect(layout.buildX, by, layout.buildW, itemH - 6);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = t.color;
+        ctx.beginPath();
+        ctx.arc(layout.buildX + 16, by + 18, 8, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.textBaseline = "top";
+        ctx.fillStyle = disabled ? "#8ea0b8" : "#e9f2ff";
+        ctx.font = "600 11px 'Space Grotesk', sans-serif";
+        ctx.fillText(`${t.name} ($${t.cost})`, layout.buildX + 30, by + 8);
+        ctx.fillStyle = "#a9bfdc";
+        ctx.font = "500 9.5px 'Space Grotesk', sans-serif";
+        ctx.fillText(t.desc || "", layout.buildX + 30, by + 20);
+        ctx.textBaseline = "alphabetic";
+        ctx.restore();
+        uiState.buildButtons.push({ x: layout.buildX, y: by, w: layout.buildW, h: itemH - 6, type, disabled });
+        by += itemH;
+      }
+
+      const statsLines = state.selectionLines || [];
+      const statsX = layout.pad;
+      const statsY = H - layout.bottomH + 4;
+      const statsW = W - layout.sideW - layout.pad * 2;
+      const statsH = layout.actionsH;
+      ctx.save();
+      ctx.fillStyle = "rgba(9, 21, 35, 0.62)";
+      ctx.strokeStyle = "rgba(170, 210, 255, 0.58)";
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.rect(statsX, statsY, statsW, statsH);
+      ctx.fill();
+      ctx.stroke();
+      ctx.font = "600 11px 'Space Grotesk', sans-serif";
+      const lineH = 14;
+      const textBlockH = Math.max(1, statsLines.length) * lineH;
+      let ty = statsY + (statsH - textBlockH) / 2 + 10;
+      ctx.textAlign = "left";
+      for (const line of statsLines) {
+        ctx.fillStyle = line.tone === "upgrade" ? "#ffb765" : "#c9dbf5";
+        ctx.fillText(line.text, statsX + 10, ty);
+        ty += lineH;
+      }
+      ctx.restore();
+
+      const actions = [
+        { id: "startWave", label: startWaveBtn.textContent, kind: "primary", disabled: startWaveBtn.disabled, glow: state.waveReadyGlow && !state.gameOver && !state.paused },
+        { id: "meteor", label: meteorBtn.textContent, kind: "warn", disabled: meteorBtn.disabled },
+        { id: "upgrade", label: upgradeBtn.textContent, kind: "upgrade", disabled: upgradeBtn.disabled },
+        { id: "sell", label: sellBtn.textContent, kind: "sell", disabled: sellBtn.disabled }
+      ];
+      const bw = 58;
+      const gap = 8;
+      const rightPad = 10;
+      const totalW = actions.length * bw + (actions.length - 1) * gap;
+      let ax = W - layout.sideW - totalW - layout.pad - rightPad;
+      const ay = layout.actionsY + (layout.actionsH - 32) / 2;
+      for (const btn of actions) {
+        drawUiButton(ax, ay, bw, 32, btn.label, btn.kind || "base", btn.disabled, btn.glow);
+        uiState.buttons.push({ x: ax, y: ay, w: bw, h: 32, id: btn.id, disabled: btn.disabled });
+        ax += bw + gap;
+      }
     }
 
     function updateMeteorEffects(dt) {
@@ -2218,23 +2541,42 @@
       ctx.font = "700 42px 'Bungee', sans-serif";
       ctx.textAlign = "center";
       ctx.fillText("Paused", W / 2, H / 2);
-      ctx.font = "600 16px 'Space Grotesk', sans-serif";
-      ctx.fillText("Press P to resume", W / 2, H / 2 + 30);
       ctx.textAlign = "start";
       ctx.restore();
+
+      const bw = 150;
+      const bh = 38;
+      const gap = 12;
+      const totalW = bw * 2 + gap;
+      const bx = W / 2 - totalW / 2;
+      const by = H / 2 + 50;
+      drawUiButton(bx, by, bw, bh, "Resume", "primary", false);
+      drawUiButton(bx + bw + gap, by, bw, bh, "Restart", "warn", false);
+      uiState.pauseButtons = [
+        { x: bx, y: by, w: bw, h: bh, id: "resume", disabled: false },
+        { x: bx + bw + gap, y: by, w: bw, h: bh, id: "restart", disabled: false }
+      ];
     }
 
-    const mouse = { x: W / 2, y: H / 2 };
+    const mouse = { x: W / 2, y: H / 2, screenX: W / 2, screenY: H / 2, inside: true };
     canvas.addEventListener("mousemove", (e) => {
       const p = worldPos(e);
-      mouse.x = p.x;
-      mouse.y = p.y;
+      const w = screenToWorld(p.x, p.y);
+      mouse.screenX = p.x;
+      mouse.screenY = p.y;
+      mouse.x = w.x;
+      mouse.y = w.y;
+      mouse.inside = w.inside;
     });
     canvas.addEventListener("touchmove", (e) => {
       if (!e.touches.length) return;
       const p = worldPos(e.touches[0]);
-      mouse.x = p.x;
-      mouse.y = p.y;
+      const w = screenToWorld(p.x, p.y);
+      mouse.screenX = p.x;
+      mouse.screenY = p.y;
+      mouse.x = w.x;
+      mouse.y = w.y;
+      mouse.inside = w.inside;
     }, { passive: true });
 
     canvas.addEventListener("mousedown", (e) => {
@@ -2246,6 +2588,9 @@
       const by = H / 2 + 46;
       if (p.x >= bx && p.x <= bx + bw && p.y >= by && p.y <= by + bh) {
         resetGame();
+        state.screen = "play";
+        state.message = "Deploy defenses.";
+        state.messageAt = Date.now();
         startLoop();
       }
     });
@@ -2260,12 +2605,8 @@
       rafId = requestAnimationFrame(frame);
     }
 
-    function frame(t) {
-      if (!isLoopRunning) return;
-      const dt = Math.min(0.033, (t - lastTime) / 1000);
-      lastTime = t;
-
-      if (!state.gameOver && !state.paused) {
+    function step(dt) {
+      if (!state.gameOver && !state.paused && state.screen === "play") {
         state.nextWaveTimer -= dt;
         if (state.nextWaveTimer <= 0) startWave(false);
         spawnEnemyBatch(dt);
@@ -2295,8 +2636,16 @@
       }
 
       if (!state.gameOver) {
+        updateHoverBuild();
         updateButtons();
       }
+    }
+
+    function frame(t) {
+      if (!isLoopRunning) return;
+      const dt = Math.min(0.033, (t - lastTime) / 1000);
+      lastTime = t;
+      step(dt);
       render();
       if (state.gameOver) {
         isLoopRunning = false;
@@ -2307,7 +2656,17 @@
     }
 
     function render() {
-      ctx.clearRect(0, 0, W, H);
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.setTransform(scaleX, 0, 0, scaleY, 0, 0);
+      const wt = getWorldTransform();
+      state.worldTransform = wt;
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(wt.playX, wt.playY, wt.playW, wt.playH);
+      ctx.clip();
+      ctx.translate(wt.ox, wt.oy);
+      ctx.scale(wt.scale, wt.scale);
       drawGrid();
       drawMapDecor();
       drawPath();
@@ -2321,11 +2680,46 @@
       drawParticles();
       drawPlacementGhost();
       drawMeteorMarker();
+      ctx.restore();
+      drawCanvasUI();
       drawPaused();
       drawGameOver();
     }
 
-    syncTowerGridFromTypes();
+    window.render_game_to_text = function renderGameToText() {
+      const payload = {
+        mode: state.screen,
+        paused: state.paused,
+        gameOver: state.gameOver,
+        wave: state.wave,
+        gold: Math.floor(state.gold),
+        hp: state.health,
+        nextWaveIn: Math.ceil(state.nextWaveTimer),
+        meteorCooldown: Math.max(0, Math.ceil((state.meteorReadyAt - Date.now()) / 1000)),
+        selection: {
+          build: state.selectedBuild,
+          tower: state.selectedTower
+            ? { type: state.selectedTower.type, level: state.selectedTower.level, x: Math.round(state.selectedTower.x), y: Math.round(state.selectedTower.y) }
+            : null,
+          enemy: state.selectedEnemy
+            ? { type: state.selectedEnemy.kind, hp: Math.round(state.selectedEnemy.hp), x: Math.round(state.selectedEnemy.x), y: Math.round(state.selectedEnemy.y) }
+            : null
+        },
+        towers: state.towers.map((t) => ({ type: t.type, level: t.level, x: Math.round(t.x), y: Math.round(t.y) })),
+        enemies: state.enemies.map((e) => ({ type: e.kind, hp: Math.round(e.hp), x: Math.round(e.x), y: Math.round(e.y) })),
+        note: "origin top-left, x right, y down"
+      };
+      return JSON.stringify(payload);
+    };
+
+    window.advanceTime = function advanceTime(ms) {
+      const steps = Math.max(1, Math.round(ms / (1000 / 60)));
+      for (let i = 0; i < steps; i++) {
+        step(1 / 60);
+      }
+      render();
+    };
+
     resetGame();
     startLoop();
   </script>

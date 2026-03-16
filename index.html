@@ -416,7 +416,7 @@
     const WAVE_INTERVAL_S = 35;
     const METEOR_RADIUS = 56;
     const METEOR_DAMAGE = 180;
-    const METEOR_WAVE_BONUS = 40;
+    const METEOR_WAVE_BONUS = 20;
     const uiState = { buttons: [], buildButtons: [], pauseButtons: [], startButton: null };
 
     const path = [
@@ -446,8 +446,8 @@
         desc: "Rapid single-target shots.",
         cost: 50,
         range: 134,
-        fireRate: 0.22,
-        damage: 24,
+        fireRate: 0.33,
+        damage: 36,
         color: "#aab6c4",
         projectileSpeed: 620
       },
@@ -468,7 +468,7 @@
         cost: 400,
         range: 176,
         fireRate: 0.67,
-        damage: 18,
+        damage: 64,
         slow: 0.76,
         slowTime: 1.0,
         color: "#a6b9ff",
@@ -518,9 +518,9 @@
         name: "Storm Arc",
         desc: "Lightning chains across enemies.",
         cost: 500,
-        range: 202,
-        fireRate: 0.72,
-        damage: 250,
+        range: 204,
+        fireRate: 0.86,
+        damage: 300,
         chainTargets: 2,
         chainRange: 108,
         chainDamageFalloff: 0.75,
@@ -529,11 +529,11 @@
       },
       mortar: {
         name: "Siege Mortar",
-        desc: "Long-range explosive shells.",
+        desc: "Long-range explosive bombards.",
         cost: 6400,
         range: 284,
-        fireRate: 1.95,
-        damage: 1090,
+        fireRate: 1.75,
+        damage: 1040,
         splash: 108,
         color: "#dbc8a5",
         projectileSpeed: 585
@@ -546,7 +546,7 @@
         fireRate: 0.62,
         damage: 142,
         ionMarkAmp: 1.36,
-        ionMarkTime: 2.8,
+        ionMarkTime: 3.6,
         color: "#72ffd0",
         projectileSpeed: 760
       },
@@ -555,12 +555,12 @@
         desc: "Fires multiple projectiles at once.",
         cost: 220,
         range: 145,
-        fireRate: 0.14,
-        damage: 20,
+        fireRate: 0.15,
+        damage: 16,
         pellets: 3,
         spread: 0.18,
         color: "#ff9ad8",
-        projectileSpeed: 680
+        projectileSpeed: 660
       }
     };
 
@@ -637,6 +637,7 @@
         nextWaveDisabled: false,
         waveReadyGlow: false,
         clearedWave: 0,
+        meteorDamage: METEOR_DAMAGE,
         meteorReadyAt: 0,
         aimingMeteor: false,
         paused: false,
@@ -682,7 +683,7 @@
       } else {
         meteorBtn.textContent = "☄";
       }
-      const meteorDamageNow = METEOR_DAMAGE + state.wave * METEOR_WAVE_BONUS;
+      const meteorDamageNow = state.meteorDamage || METEOR_DAMAGE;
       meteorBtn.title = state.aimingMeteor
         ? "Cancel Meteor (Esc/M)"
         : `Meteor (M) DMG ${meteorDamageNow} R${METEOR_RADIUS} CD ${METEOR_CD_MS / 1000}s`;
@@ -711,8 +712,6 @@
       let nextDamage = Math.round(t.damage * (1.2 + (earlyBoost - 1) * 0.65) + 6 + t.level * 1.5);
       if (t.type === "venom") {
         nextDamage = Math.round(t.damage * (1.12 + (earlyBoost - 1) * 0.4) + 4 + t.level * 0.9);
-      } else if (t.type === "dart" && t.level >= 7) {
-        nextDamage = Math.round(nextDamage + t.level * 0.6 + 4);
       }
       const nextPellets = t.pellets
         ? (t.type === "scatter" && (t.level + 1) % 5 === 0 ? t.pellets + 1 : t.pellets)
@@ -749,7 +748,7 @@
 
       if (state.statsMode === "meteor") {
         const cd = Math.max(0, Math.ceil((state.meteorReadyAt - Date.now()) / 1000));
-        const meteorDamageNow = METEOR_DAMAGE + state.wave * METEOR_WAVE_BONUS;
+        const meteorDamageNow = state.meteorDamage || METEOR_DAMAGE;
         setSelectionLines([
           { text: `METEOR | DMG ${meteorDamageNow} | Radius ${METEOR_RADIUS}`, tone: "base" },
           { text: `Cooldown ${cd}s`, tone: "upgrade" }
@@ -860,36 +859,36 @@
         damageAmpColor: "#f58cff"
       };
       if (kind === "swarm") {
-        const maxHp = Math.round(70 * hpScale);
-        return { ...base, kind, hp: maxHp, maxHp, speed: 130 * speedScale, reward: Math.round(5 * rewardScale), color: "#fff37a", r: 8 };
+        const maxHp = Math.round(75 * hpScale);
+        return { ...base, kind, hp: maxHp, maxHp, speed: 126 * speedScale, reward: Math.round(5 * rewardScale), color: "#fff37a", r: 8 };
       }
       if (kind === "fast") {
         const maxHp = Math.round(120 * hpScale);
         return { ...base, kind, hp: maxHp, maxHp, speed: 104 * speedScale, reward: Math.round(7 * rewardScale), color: "#f4d35e", r: 10 };
       }
       if (kind === "armored") {
-        const maxHp = Math.round(205 * hpScale);
-        return { ...base, kind, hp: maxHp, maxHp, speed: 51 * speedScale, reward: Math.round(18 * rewardScale), color: "#9bb5c9", r: 14, armor: 0.25 };
+        const maxHp = Math.round(192 * hpScale);
+        return { ...base, kind, hp: maxHp, maxHp, speed: 51 * speedScale, reward: Math.round(18 * rewardScale), color: "#9bb5c9", r: 14, armor: 0.3 };
       }
       if (kind === "striker") {
         const maxHp = Math.round(130 * hpScale);
-        return { ...base, kind, hp: maxHp, maxHp, speed: 92 * speedScale, reward: Math.round(10 * rewardScale), color: "#ffb778", r: 11, armor: 0.08 };
+        return { ...base, kind, hp: maxHp, maxHp, speed: 90 * speedScale, reward: Math.round(10 * rewardScale), color: "#ffb778", r: 11, armor: 0.08 };
       }
       if (kind === "bulwark") {
-        const maxHp = Math.round(290 * hpScale);
+        const maxHp = Math.round(270 * hpScale);
         return { ...base, kind, hp: maxHp, maxHp, speed: 47 * speedScale, reward: Math.round(22 * rewardScale), color: "#8aa0b8", r: 16, armor: 0.4 };
       }
       if (kind === "tank") {
-        const maxHp = Math.round(195 * hpScale);
-        return { ...base, kind, hp: maxHp, maxHp, speed: 48 * speedScale, reward: Math.round(16 * rewardScale), color: "#f16f8a", r: 15, armor: 0.12 };
+        const maxHp = Math.round(190 * hpScale);
+        return { ...base, kind, hp: maxHp, maxHp, speed: 48 * speedScale, reward: Math.round(16 * rewardScale), color: "#f16f8a", r: 15, armor: 0.2 };
       }
       if (kind === "leech") {
         const maxHp = Math.round(200 * hpScale);
-        return { ...base, kind, hp: maxHp, maxHp, speed: 78 * speedScale, reward: Math.round(14 * rewardScale), color: "#73ffd4", r: 11 };
+        return { ...base, kind, hp: maxHp, maxHp, speed: 78 * speedScale, reward: Math.round(14 * rewardScale), color: "#73ffd4", r: 11, armor: 0.04 };
       }
       if (kind === "boss") {
-        const maxHp = Math.round(555 * hpScale);
-        return { ...base, kind, hp: maxHp, maxHp, speed: 44 * speedScale, reward: Math.round(36 * rewardScale), color: "#c972ff", r: 18, armor: 0.28, coreDamage: 2 };
+        const maxHp = Math.round(545 * hpScale);
+        return { ...base, kind, hp: maxHp, maxHp, speed: 43 * speedScale, reward: Math.round(45 * rewardScale), color: "#c972ff", r: 18, armor: 0.5, coreDamage: 3 };
       }
       const maxHp = Math.round(88 * hpScale);
       return { ...base, kind: "basic", hp: maxHp, maxHp, speed: 72 * speedScale, reward: Math.round(9 * rewardScale), color: "#75e9a7", r: 12 };
@@ -898,6 +897,7 @@
     function startWave(manual = true) {
       if (state.gameOver || state.victory) return;
       state.wave += 1;
+      state.meteorDamage = (state.meteorDamage || METEOR_DAMAGE) + state.wave * METEOR_WAVE_BONUS;
       state.waveInProgress = true;
       state.waveReadyGlow = false;
       if (state.wave === 100) {
@@ -927,15 +927,16 @@
     }
 
     function pickWavePattern(wave) {
-      const cycle = wave % 9;
-      if (wave >= 14 && cycle === 0) return "bossRush";
-      if (cycle === 1) return "swarmFlood";
-      if (cycle === 2) return "armorColumn";
-      if (cycle === 3) return "leechRaid";
-      if (cycle === 4) return "blitz";
-      if (cycle === 5) return "basic";
-      if (cycle === 6) return "runnerMix";
-      if (cycle === 7) return "fortressLine";
+      const cycle = wave % 10;
+      if (wave >= 10 && cycle === 0) return "bossRush";
+      if (cycle === 1) return "basic";
+      if (cycle === 2) return "strikerRaid";
+      if (cycle === 3) return "leech";
+      if (cycle === 4) return "armorColumn";
+      if (cycle === 5) return "blitz";
+      if (cycle === 6) return "swarmFlood";
+      if (cycle === 7) return "runnerMix";
+      if (cycle === 8) return "fortressLine";
       return "toxicBloom";
     }
 
@@ -944,7 +945,7 @@
       const pattern = pickWavePattern(wave);
       if (pattern === "bossRush") {
         if (idx % 10 === 0) return "boss";
-        if (idx % 4 === 0) return "tank";
+        if (idx % 4 === 0) return "bulwark";
         return "armored";
       }
       if (pattern === "swarmFlood") {
@@ -956,39 +957,34 @@
         if (idx % 3 === 0) return "tank";
         return "armored";
       }
-      if (pattern === "leechRaid") {
+      if (pattern === "strikerRaid") {
         if (idx % 5 === 0) return "leech";
         if (idx % 9 === 0) return "fast";
         return "striker";
       }
       if (pattern === "blitz") {
-        if (idx % 4 === 0) return "striker";
-        if (idx % 3 === 0) return "fast";
+        if (idx % 3 === 0) return "striker";
+        if (idx % 2 === 0) return "fast";
         return "swarm";
       }
       if (pattern === "runnerMix") {
         if (idx % 5 === 0) return "striker";
-        if (idx % 2 === 0) return "fast";
-        return "swarm";
+        if (idx % 2 === 0) return "basic";
+        return "fast";
       }
       if (pattern === "fortressLine") {
-        if (idx % 6 === 0) return "bulwark";
+        if (idx % 5 === 0) return "bulwark";
         if (idx % 3 === 0) return "armored";
         return "tank";
       }
       if (pattern === "toxicBloom") {
         if (idx % 3 === 0) return "leech";
-        return "swarm";
+        return "tank";
       }
-      if (wave >= 12 && idx % 14 === 0) return "boss";
-      if (wave >= 9 && idx % 11 === 0) return "bulwark";
-      if (wave >= 8 && idx % 9 === 0) return "armored";
-      if (wave >= 7 && idx % 10 === 0) return "leech";
-      if (wave >= 6 && idx % 8 === 0) return "striker";
-      if (wave >= 5 && idx % 6 === 0) return "tank";
-      if (wave >= 4 && idx % 6 === 0) return "swarm";
-      if (wave >= 3 && idx % 3 === 0) return "fast";
-      return "basic";
+      if (pattern === "leech") {
+        if (idx % 2 === 0) return "basic";
+        return "leech";
+      }
     }
 
     function spawnEnemyBatch(dt) {
@@ -1141,8 +1137,10 @@
 
     function hitEnemy(enemy, damage, quiet = false) {
       const amp = enemy.damageAmpTimer > 0 ? enemy.damageAmp : 1;
-      const reduced = enemy.armor ? damage * (1 - enemy.armor) : damage;
+      let reduced = enemy.armor ? damage * (1 - enemy.armor) - enemy.armor * state.wave : damage;
+      reduced = Math.max(0, reduced);
       enemy.hp -= reduced * amp;
+      enemy.hp = Math.min(enemy.maxHp, enemy.hp);
       if (!quiet) {
         state.particles.push({ x: enemy.x, y: enemy.y, r: 5, life: 0.22, color: "#ffffff" });
       }
@@ -1431,9 +1429,6 @@
         t.damage = t.damage * (1.12 + (earlyBoost - 1) * 0.4) + 4 + (t.level - 1) * 0.9;
       } else {
         t.damage = t.damage * baseDamageScale + 6 + (t.level - 1) * 1.5;
-        if (t.type === "dart" && t.level > 7) {
-          t.damage += (t.level - 1) * 0.6 + 4;
-        }
       }
       t.range += 2 + (earlyBoost - 1) * 8;
       if (t.type === "venom") {
@@ -2592,7 +2587,7 @@
         fx.t += dt;
         if (!fx.done && fx.t >= fx.impactAt) {
           fx.done = true;
-          const meteorDamageNow = METEOR_DAMAGE + state.wave * METEOR_WAVE_BONUS;
+          const meteorDamageNow = state.meteorDamage || METEOR_DAMAGE;
           explode(fx.x, fx.y, METEOR_RADIUS, meteorDamageNow, "#ff7f50", 0, 0);
           state.message = "Meteor impact!";
         }

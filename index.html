@@ -416,7 +416,9 @@
     const WAVE_INTERVAL_S = 40;
     const METEOR_RADIUS = 56;
     const METEOR_DAMAGE = 180;
-    const uiState = { buttons: [], buildButtons: [], pauseButtons: [], startButton: null };
+    const SAVE_KEY_PREFIX = "td-save-v1-slot";
+    const SLOT_COUNT = 3;
+    const uiState = { buttons: [], buildButtons: [], pauseButtons: [], startButtons: [], menuButtons: [] };
 
     const path = [
       { x: -48, y: 432 },
@@ -644,10 +646,164 @@
         gameOver: false,
         victory: false,
         screen: "start",
-        message: "Set up quickly. First wave starts in 40s."
+        menuMode: null,
+        menuFrom: null,
+        pendingSlot: null,
+        message: ""
       };
       updateHUD();
       updateButtons();
+    }
+
+    function getSlotKey(slot) {
+      return `${SAVE_KEY_PREFIX}-${slot}`;
+    }
+
+    function hasSavedGame(slot = null) {
+      try {
+        if (slot) return !!localStorage.getItem(getSlotKey(slot));
+        for (let i = 1; i <= SLOT_COUNT; i++) {
+          if (localStorage.getItem(getSlotKey(i))) return true;
+        }
+        return false;
+      } catch (err) {
+        return false;
+      }
+    }
+
+    function getSlotPreview(slot) {
+      try {
+        const raw = localStorage.getItem(getSlotKey(slot));
+        if (!raw) return null;
+        const payload = JSON.parse(raw);
+        const s = payload && payload.state ? payload.state : null;
+        if (!s) return null;
+        return {
+          wave: Number.isFinite(s.wave) ? s.wave : 0,
+          gold: Number.isFinite(s.gold) ? Math.floor(s.gold) : 0,
+          hp: Number.isFinite(s.health) ? s.health : 0
+        };
+      } catch (err) {
+        return null;
+      }
+    }
+
+    function buildSavePayload() {
+      const selectedTowerIndex = state.selectedTower ? state.towers.indexOf(state.selectedTower) : -1;
+      const selectedEnemyIndex = state.selectedEnemy ? state.enemies.indexOf(state.selectedEnemy) : -1;
+      return {
+        version: 1,
+        savedAt: Date.now(),
+        state: {
+          gold: state.gold,
+          health: state.health,
+          wave: state.wave,
+          score: state.score,
+          selectedBuild: state.selectedBuild,
+          statsMode: state.statsMode,
+          waveInProgress: state.waveInProgress,
+          toSpawn: state.toSpawn,
+          spawnTimer: state.spawnTimer,
+          nextWaveTimer: state.nextWaveTimer,
+          nextWaveDisabled: state.nextWaveDisabled,
+          waveReadyGlow: state.waveReadyGlow,
+          clearedWave: state.clearedWave,
+          meteorDamage: state.meteorDamage,
+          meteorReadyAt: state.meteorReadyAt,
+          aimingMeteor: state.aimingMeteor,
+          paused: state.paused,
+          gameOver: state.gameOver,
+          victory: state.victory,
+          screen: state.screen,
+          message: state.message,
+          towers: state.towers.map((t) => ({ ...t })),
+          enemies: state.enemies.map((e) => ({ ...e })),
+          projectiles: state.projectiles.map((p) => ({ ...p })),
+          particles: state.particles.map((p) => ({ ...p })),
+          hazards: state.hazards.map((h) => ({ ...h })),
+          meteorEffects: state.meteorEffects.map((fx) => ({ ...fx })),
+          selectedTowerIndex,
+          selectedEnemyIndex
+        }
+      };
+    }
+
+    function saveGameToSlot(slot) {
+      try {
+        const payload = buildSavePayload();
+        localStorage.setItem(getSlotKey(slot), JSON.stringify(payload));
+        state.message = `Saved to Slot ${slot}.`;
+      } catch (err) {
+        state.message = "Save failed.";
+      }
+      state.messageAt = Date.now();
+      updateButtons();
+    }
+
+    function applySavePayload(payload) {
+      if (!payload || payload.version !== 1 || !payload.state) return false;
+      const loaded = payload.state;
+      resetGame();
+      state = {
+        ...state,
+        ...loaded,
+        towers: (loaded.towers || []).map((t) => ({ ...t })),
+        enemies: (loaded.enemies || []).map((e) => ({ ...e })),
+        projectiles: (loaded.projectiles || []).map((p) => ({ ...p })),
+        particles: (loaded.particles || []).map((p) => ({ ...p })),
+        hazards: (loaded.hazards || []).map((h) => ({ ...h })),
+        meteorEffects: (loaded.meteorEffects || []).map((fx) => ({ ...fx })),
+        selectionLines: [],
+        hoverBuild: null
+      };
+      const towerIndex = Number.isInteger(loaded.selectedTowerIndex) ? loaded.selectedTowerIndex : -1;
+      const enemyIndex = Number.isInteger(loaded.selectedEnemyIndex) ? loaded.selectedEnemyIndex : -1;
+      state.selectedTower = towerIndex >= 0 && towerIndex < state.towers.length ? state.towers[towerIndex] : null;
+      state.selectedEnemy = enemyIndex >= 0 && enemyIndex < state.enemies.length ? state.enemies[enemyIndex] : null;
+      if (state.screen !== "play" && state.screen !== "start") state.screen = "play";
+      if (state.screen === "start") state.paused = false;
+      state.message = "Game loaded.";
+      state.messageAt = Date.now();
+      updateHUD();
+      updateButtons();
+      updateSelectionStats();
+      return true;
+    }
+
+    function loadGameFromSlot(slot) {
+      try {
+        const raw = localStorage.getItem(getSlotKey(slot));
+        if (!raw) {
+          state.message = `Slot ${slot} empty.`;
+          state.messageAt = Date.now();
+          updateButtons();
+          return;
+        }
+        const payload = JSON.parse(raw);
+        if (!applySavePayload(payload)) {
+          state.message = "Save corrupted.";
+          state.messageAt = Date.now();
+          updateButtons();
+          return;
+        }
+        if (!isLoopRunning) startLoop();
+      } catch (err) {
+        state.message = "Load failed.";
+        state.messageAt = Date.now();
+        updateButtons();
+      }
+    }
+
+    function openSlotMenu(mode) {
+      state.menuMode = mode;
+      state.menuFrom = state.screen;
+      state.pendingSlot = null;
+    }
+
+    function closeSlotMenu() {
+      state.menuMode = null;
+      state.menuFrom = null;
+      state.pendingSlot = null;
     }
 
     function updateHUD() {
@@ -1539,11 +1695,47 @@
         }
         return;
       }
+      if (state.menuMode) {
+        for (const btn of uiState.menuButtons) {
+          if (hitRect(x, y, btn) && !btn.disabled) {
+            if (btn.id === "menuBack") {
+              closeSlotMenu();
+              return;
+            }
+            if (btn.id === "confirmOverwrite") {
+              saveGameToSlot(btn.slot);
+              closeSlotMenu();
+              return;
+            }
+            if (btn.id === "cancelOverwrite") {
+              state.menuMode = "save";
+              state.pendingSlot = null;
+              return;
+            }
+            if (btn.id === "slot") {
+              if (state.menuMode === "save") {
+                if (hasSavedGame(btn.slot)) {
+                  state.menuMode = "saveConfirm";
+                  state.pendingSlot = btn.slot;
+                  return;
+                }
+                saveGameToSlot(btn.slot);
+              } else {
+                loadGameFromSlot(btn.slot);
+              }
+              closeSlotMenu();
+              return;
+            }
+          }
+        }
+        return;
+      }
       if (state.screen === "start") {
-        if (uiState.startButton && hitRect(x, y, uiState.startButton)) {
-          state.screen = "play";
-          state.messageAt = Date.now();
-          updateButtons();
+        for (const btn of uiState.startButtons) {
+          if (hitRect(x, y, btn) && !btn.disabled) {
+            handleUiAction(btn.id);
+            return;
+          }
         }
         return;
       }
@@ -1646,6 +1838,14 @@
       if (id === "sell") sellSelected();
       if (id === "resume") togglePause();
       if (id === "restart") restartFromPause();
+      if (id === "save") openSlotMenu("save");
+      if (id === "load") openSlotMenu("load");
+      if (id === "start") {
+        state.screen = "play";
+        state.message = "Set up quickly. First wave starts in 40s.";
+        state.messageAt = Date.now();
+        updateButtons();
+      }
       if (id === "fullscreen") toggleFullscreen();
     }
 
@@ -1729,6 +1929,7 @@
     function restartFromPause() {
       resetGame();
       state.screen = "play";
+      state.message = "Set up quickly. First wave starts in 40s.";
       state.messageAt = Date.now();
       startLoop();
     }
@@ -2455,7 +2656,8 @@
       uiState.buildButtons = [];
       uiState.pauseButtons = [];
       uiState.victoryButtons = [];
-      uiState.startButton = null;
+      uiState.startButtons = [];
+      uiState.menuButtons = [];
       const layout = getUiLayout();
 
       if (state.screen === "start") {
@@ -2470,21 +2672,27 @@
         ctx.font = "600 16px 'Space Grotesk', sans-serif";
         ctx.fillText("Place towers. Stop the enemies. Protect the core.", W / 2, H / 2 - 10);
         const bw = 200;
-        const bh = 46;
+        const bh = 40;
+        const gap = 10;
+        const totalH = bh * 2 + gap;
         const bx = W / 2 - bw / 2;
-        const by = H / 2 + 16;
-        ctx.fillStyle = "rgba(42, 112, 168, 0.9)";
-        ctx.strokeStyle = "rgba(180, 222, 255, 0.9)";
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.rect(bx, by, bw, bh);
-        ctx.fill();
-        ctx.stroke();
-        ctx.fillStyle = "#eef6ff";
-        ctx.font = "700 18px 'Space Grotesk', sans-serif";
-        ctx.fillText("Start", W / 2, by + 30);
+        let by = H / 2 + 10;
+        const buttons = [
+          { id: "start", label: "Start", kind: "primary", disabled: false },
+          { id: "load", label: "Load", kind: "primary", disabled: !hasSavedGame() }
+        ];
+        for (const btn of buttons) {
+          drawUiButton(bx, by, bw, bh, btn.label, btn.kind, btn.disabled);
+          uiState.startButtons.push({ x: bx, y: by, w: bw, h: bh, id: btn.id, disabled: btn.disabled });
+          by += bh + gap;
+        }
+        const info = state.message || "";
+        if (info) {
+          ctx.fillStyle = "#9cb0cc";
+          ctx.font = "600 13px 'Space Grotesk', sans-serif";
+          ctx.fillText(info, W / 2, H / 2 + 10 + totalH + 16);
+        }
         ctx.textAlign = "start";
-        uiState.startButton = { x: bx, y: by, w: bw, h: bh };
         ctx.restore();
         return;
       }
@@ -2738,7 +2946,7 @@
       ctx.fillStyle = "#cbe3ff";
       ctx.font = "700 42px 'Bungee', sans-serif";
       ctx.textAlign = "center";
-      ctx.fillText("Paused", W / 2, H / 2);
+      ctx.fillText("Paused", W / 2, H / 2 - 25);
       ctx.textAlign = "start";
       ctx.restore();
 
@@ -2747,13 +2955,99 @@
       const gap = 12;
       const totalW = bw * 2 + gap;
       const bx = W / 2 - totalW / 2;
-      const by = H / 2 + 50;
+      const by = H / 2 + 15;
       drawUiButton(bx, by, bw, bh, "Restart", "warn", false);
       drawUiButton(bx + bw + gap, by, bw, bh, "Resume", "primary", false);
+      const row2 = by + bh + gap;
+      const loadDisabled = !hasSavedGame();
+      drawUiButton(bx, row2, bw, bh, "Save", "primary", false);
+      drawUiButton(bx + bw + gap, row2, bw, bh, "Load", "primary", loadDisabled);
       uiState.pauseButtons = [
         { x: bx, y: by, w: bw, h: bh, id: "restart", disabled: false },
-        { x: bx + bw + gap, y: by, w: bw, h: bh, id: "resume", disabled: false }
+        { x: bx + bw + gap, y: by, w: bw, h: bh, id: "resume", disabled: false },
+        { x: bx, y: row2, w: bw, h: bh, id: "save", disabled: false },
+        { x: bx + bw + gap, y: row2, w: bw, h: bh, id: "load", disabled: loadDisabled }
       ];
+    }
+
+    function drawSlotMenu() {
+      if (!state.menuMode) return;
+      uiState.menuButtons = [];
+      ctx.save();
+      ctx.fillStyle = "rgba(3, 9, 16, 0.72)";
+      ctx.fillRect(0, 0, W, H);
+      ctx.fillStyle = "#d9f0ff";
+      ctx.font = "700 36px 'Bungee', sans-serif";
+      ctx.textAlign = "center";
+      const isConfirm = state.menuMode === "saveConfirm";
+      const title = isConfirm
+        ? `Overwrite Slot ${state.pendingSlot || ""} ?`.trim()
+        : (state.menuMode === "save" ? "Save Game" : "Load Game");
+      const titleY = isConfirm ? (H / 2 - 12) : (H / 2 - 90);
+      ctx.fillText(title, W / 2, titleY);
+
+      if (isConfirm) {
+        const bw = 170;
+        const bh = 38;
+        const gap = 12;
+        const totalW = bw * 2 + gap;
+        const bx = W / 2 - totalW / 2;
+        const by = H / 2 + 22;
+        drawUiButton(bx, by, bw, bh, "Overwrite", "warn", false);
+        drawUiButton(bx + bw + gap, by, bw, bh, "Cancel", "primary", false);
+        uiState.menuButtons.push({ x: bx, y: by, w: bw, h: bh, id: "confirmOverwrite", slot: state.pendingSlot, disabled: false });
+        uiState.menuButtons.push({ x: bx + bw + gap, y: by, w: bw, h: bh, id: "cancelOverwrite", disabled: false });
+        ctx.textAlign = "start";
+        ctx.restore();
+        return;
+      }
+
+      const bw = 220;
+      const bh = 38;
+      const gap = 10;
+      const totalH = bh * SLOT_COUNT + gap * (SLOT_COUNT - 1);
+      const bx = W / 2 - bw / 2;
+      let by = H / 2 - totalH / 2 + 4;
+      for (let i = 1; i <= SLOT_COUNT; i++) {
+        const disabled = state.menuMode === "load" && !hasSavedGame(i);
+        const preview = getSlotPreview(i);
+        drawUiButton(bx, by, bw, bh, "", "primary", disabled);
+        const textY = by + bh / 2 + 4;
+        ctx.font = "700 12px 'Space Grotesk', sans-serif";
+        ctx.textAlign = "left";
+        const pad = 14;
+        let tx = bx + pad;
+        ctx.fillStyle = disabled ? "#8b9ab1" : "#cfe3ff";
+        const base = `Slot ${i}  •  `;
+        ctx.fillText(base, tx, textY);
+        tx += ctx.measureText(base).width;
+        if (!preview) {
+          ctx.fillStyle = disabled ? "#8b9ab1" : "#9cb0cc";
+          ctx.fillText("Empty", tx, textY);
+        } else {
+          ctx.fillStyle = disabled ? "#8b9ab1" : "#cfe3ff";
+          const wave = `W${preview.wave}  •  `;
+          ctx.fillText(wave, tx, textY);
+          tx += ctx.measureText(wave).width;
+          ctx.fillStyle = disabled ? "#8b9ab1" : "#ffd85a";
+          const gold = `Gold ${preview.gold}  •  `;
+          ctx.fillText(gold, tx, textY);
+          tx += ctx.measureText(gold).width;
+          ctx.fillStyle = disabled ? "#8b9ab1" : "#ff6a78";
+          ctx.fillText(`HP ${preview.hp}`, tx, textY);
+        }
+        ctx.textAlign = "center";
+        uiState.menuButtons.push({ x: bx, y: by, w: bw, h: bh, id: "slot", slot: i, disabled });
+        by += bh + gap;
+      }
+
+      const backW = 140;
+      const backH = 34;
+      const backY = by + 12;
+      drawUiButton(W / 2 - backW / 2, backY, backW, backH, "Back", "primary", false);
+      uiState.menuButtons.push({ x: W / 2 - backW / 2, y: backY, w: backW, h: backH, id: "menuBack", disabled: false });
+      ctx.textAlign = "start";
+      ctx.restore();
     }
 
     const mouse = { x: W / 2, y: H / 2, screenX: W / 2, screenY: H / 2, inside: true };
@@ -2884,6 +3178,7 @@
       ctx.restore();
       drawCanvasUI();
       drawPaused();
+      drawSlotMenu();
       drawGameOver();
       drawVictory();
     }

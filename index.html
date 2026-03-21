@@ -638,6 +638,8 @@
         nextWaveDisabled: false,
         waveReadyGlow: false,
         clearedWave: 0,
+        autoStartWave: false,
+        autoUpgradeTower: false,
         meteorDamage: METEOR_DAMAGE,
         meteorReadyAt: 0,
         aimingMeteor: false,
@@ -708,6 +710,8 @@
           nextWaveDisabled: state.nextWaveDisabled,
           waveReadyGlow: state.waveReadyGlow,
           clearedWave: state.clearedWave,
+          autoStartWave: state.autoStartWave,
+          autoUpgradeTower: state.autoUpgradeTower,
           meteorDamage: state.meteorDamage,
           meteorReadyAt: state.meteorReadyAt,
           aimingMeteor: state.aimingMeteor,
@@ -738,6 +742,64 @@
       }
       state.messageAt = Date.now();
       updateButtons();
+    }
+
+    function encodeCloudSave(payload) {
+      try {
+        return `TD1.${btoa(unescape(encodeURIComponent(JSON.stringify(payload))))}`;
+      } catch (err) {
+        return "";
+      }
+    }
+
+    function decodeCloudSave(code) {
+      if (!code || typeof code !== "string") return null;
+      const trimmed = code.trim();
+      if (!trimmed.startsWith("TD1.")) return null;
+      try {
+        const json = decodeURIComponent(escape(atob(trimmed.slice(4))));
+        return JSON.parse(json);
+      } catch (err) {
+        return null;
+      }
+    }
+
+    async function exportCloudSave() {
+      const payload = buildSavePayload();
+      const code = encodeCloudSave(payload);
+      if (!code) {
+        state.message = "Cloud save failed.";
+        state.messageAt = Date.now();
+        updateButtons();
+        return;
+      }
+      try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          await navigator.clipboard.writeText(code);
+          state.message = "Cloud save code copied.";
+        } else {
+          window.prompt("Copy cloud save code", code);
+          state.message = "Cloud save code ready.";
+        }
+      } catch (err) {
+        window.prompt("Copy cloud save code", code);
+        state.message = "Cloud save code ready.";
+      }
+      state.messageAt = Date.now();
+      updateButtons();
+    }
+
+    function importCloudSave() {
+      const code = window.prompt("Paste cloud save code");
+      if (!code) return;
+      const payload = decodeCloudSave(code);
+      if (!payload || !applySavePayload(payload)) {
+        state.message = "Cloud save invalid.";
+        state.messageAt = Date.now();
+        updateButtons();
+        return;
+      }
+      if (!isLoopRunning) startLoop();
     }
 
     function applySavePayload(payload) {
@@ -818,7 +880,7 @@
       sellBtn.disabled = state.paused || !state.selectedTower || state.gameOver || state.victory;
       const upgradeCostNow = state.selectedTower ? getUpgradeCost(state.selectedTower) : Infinity;
       upgradeBtn.disabled = state.paused || !state.selectedTower || state.gameOver || state.victory || state.gold < upgradeCostNow || (state.selectedTower && state.selectedTower.level >= 10);
-      startWaveBtn.disabled = state.paused || state.waveInProgress || state.gameOver || state.victory || state.nextWaveDisabled;
+      startWaveBtn.disabled = state.screen !== "play" || state.paused || state.waveInProgress || state.gameOver || state.victory || state.nextWaveDisabled;
       const secs = state.nextWaveDisabled ? "--" : Math.max(0, Math.ceil(state.nextWaveTimer));
       startWaveBtn.textContent = `▶${secs}s`;
       startWaveBtn.title = state.nextWaveDisabled
@@ -856,6 +918,20 @@
         sellBtn.title = "Sell Selected (V)";
       }
       updateSelectionStats();
+    }
+
+    function toggleAutoStartWave() {
+      state.autoStartWave = !state.autoStartWave;
+      state.message = state.autoStartWave ? "Auto wave enabled." : "Auto wave disabled.";
+      state.messageAt = Date.now();
+      updateButtons();
+    }
+
+    function toggleAutoUpgradeTower() {
+      state.autoUpgradeTower = !state.autoUpgradeTower;
+      state.message = state.autoUpgradeTower ? "Auto upgrade enabled." : "Auto upgrade disabled.";
+      state.messageAt = Date.now();
+      updateButtons();
     }
 
     function computeNextStats(t) {
@@ -1045,8 +1121,9 @@
 
     function getHpScale(wave) {
       const baseScale = (1.78 + wave * 0.48) * (1 + wave * 0.022);
+      const midBoost = wave > 10 ? 1 + (wave - 10) * 0.01 : 1;
       const lateBoost = wave > 50 ? 1 + (wave - 50) * 0.012 : 1;
-      return baseScale * lateBoost;
+      return baseScale * midBoost * lateBoost;
     }
 
     function getWaveEnemyCount(wave) {
@@ -1118,7 +1195,7 @@
     }
 
     function startWave(manual = true) {
-      if (state.gameOver || state.victory) return;
+      if (state.screen !== "play" || state.gameOver || state.victory) return;
       state.wave += 1;
       state.meteorDamage = (state.wave - 1) ? Math.round(METEOR_DAMAGE * getHpScale(state.wave) / 2.3) : METEOR_DAMAGE;
       state.waveInProgress = true;
@@ -1676,6 +1753,15 @@
       updateButtons();
     }
 
+    function tryAutoUpgradeSelectedTower() {
+      if (!state.autoUpgradeTower || !state.selectedTower) return;
+      if (state.paused || state.gameOver || state.victory) return;
+      if (state.selectedTower.level >= 10) return;
+      const cost = getUpgradeCost(state.selectedTower);
+      if (state.gold < cost) return;
+      upgradeTower();
+    }
+
     function castMeteor(x, y) {
       const now = Date.now();
       if (now < state.meteorReadyAt) return false;
@@ -1690,7 +1776,21 @@
     }
 
     function handleCanvasPress(x, y) {
-      if (state.gameOver) return;
+      if (state.gameOver) {
+        const btns = uiState.gameOverButtons || [];
+        for (const btn of btns) {
+          if (hitRect(x, y, btn) && !btn.disabled) {
+            if (btn.id === "gameOverRestart") {
+              resetGame();
+              state.screen = "play";
+              state.messageAt = Date.now();
+              startLoop();
+            }
+            return;
+          }
+        }
+        return;
+      }
       if (state.victory) {
         const btns = uiState.victoryButtons || [];
         for (const btn of btns) {
@@ -1763,7 +1863,7 @@
           }
         }
         for (const btn of uiState.buttons) {
-          if ((btn.id === "pause" || btn.id === "fullscreen") && hitRect(x, y, btn)) {
+          if ((btn.id === "pause" || btn.id === "fullscreen" || btn.id === "autoWave" || btn.id === "autoUpgrade") && hitRect(x, y, btn) && !btn.disabled) {
             handleUiAction(btn.id);
             return;
           }
@@ -1852,10 +1952,14 @@
       if (id === "meteor") toggleMeteor();
       if (id === "upgrade") upgradeTower();
       if (id === "sell") sellSelected();
+      if (id === "autoWave") toggleAutoStartWave();
+      if (id === "autoUpgrade") toggleAutoUpgradeTower();
       if (id === "resume") togglePause();
       if (id === "restart") restartFromPause();
       if (id === "save") openSlotMenu("save");
       if (id === "load") openSlotMenu("load");
+      if (id === "cloudSave") exportCloudSave();
+      if (id === "cloudLoad") importCloudSave();
       if (id === "start") {
         state.screen = "play";
         state.message = "Set up quickly. First wave starts in 40s.";
@@ -2017,6 +2121,14 @@
       }
       if (key === "p") {
         togglePause();
+        return;
+      }
+      if (key === "g") {
+        if (!state.gameOver && !state.victory) toggleAutoStartWave();
+        return;
+      }
+      if (key === "h") {
+        if (!state.gameOver && !state.victory) toggleAutoUpgradeTower();
         return;
       }
       if (state.paused) return;
@@ -2384,11 +2496,11 @@
             ctx.save();
             ctx.rotate(spreadAngle);
             ctx.beginPath();
-            ctx.moveTo(0.625, -1.25);
-            ctx.lineTo(16.2, -0.85);
+            ctx.moveTo(0.625, -1.45);
+            ctx.lineTo(16.2, -1.0);
             ctx.lineTo(19.2, 0);
-            ctx.lineTo(16.2, 0.85);
-            ctx.lineTo(0.625, 1.25);
+            ctx.lineTo(16.2, 1.0);
+            ctx.lineTo(0.625, 1.45);
             ctx.closePath();
             ctx.fill();
             ctx.restore();
@@ -2883,12 +2995,13 @@
         const bw = 200;
         const bh = 40;
         const gap = 10;
-        const totalH = bh * 2 + gap;
+        const totalH = bh * 3 + gap * 2;
         const bx = W / 2 - bw / 2;
         let by = H / 2 + 10;
         const buttons = [
           { id: "start", label: "Start", kind: "primary", disabled: false },
-          { id: "load", label: "Load", kind: "primary", disabled: !hasSavedGame() }
+          { id: "load", label: "Load", kind: "primary", disabled: !hasSavedGame() },
+          { id: "cloudLoad", label: "Cloud Load", kind: "primary", disabled: false }
         ];
         for (const btn of buttons) {
           drawUiButton(bx, by, bw, bh, btn.label, btn.kind, btn.disabled);
@@ -3089,7 +3202,7 @@
 
     function drawGameOver() {
       if (!state.gameOver) return;
-      uiState.restartButton = null;
+      uiState.gameOverButtons = [];
       ctx.save();
       ctx.fillStyle = "rgba(0, 0, 0, 0.52)";
       ctx.fillRect(0, 0, W, H);
@@ -3100,23 +3213,20 @@
       ctx.fillStyle = "#dce8ff";
       ctx.font = "600 18px 'Space Grotesk', sans-serif";
       ctx.fillText(`Final Score: ${state.score}`, W / 2, H / 2 + 24);
-      const bw = 170;
-      const bh = 44;
-      const bx = W / 2 - bw / 2;
+      const bw = 160;
+      const bh = 38;
+      const gap = 12;
+      const totalW = bw * 2 + gap;
+      const bx = W / 2 - totalW / 2;
       const by = H / 2 + 46;
-      ctx.fillStyle = "rgba(38, 95, 140, 0.92)";
-      ctx.strokeStyle = "rgba(180, 222, 255, 0.85)";
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.rect(bx, by, bw, bh);
-      ctx.fill();
-      ctx.stroke();
-      ctx.fillStyle = "#eef6ff";
-      ctx.font = "700 18px 'Space Grotesk', sans-serif";
-      ctx.fillText("Restart", W / 2, by + 29);
+      drawUiButton(bx, by, bw, bh, "Restart", "warn", false);
+      drawUiButton(bx + bw + gap, by, bw, bh, "Continue", "primary", true);
       ctx.textAlign = "start";
       ctx.restore();
-      uiState.restartButton = { x: bx, y: by, w: bw, h: bh };
+      uiState.gameOverButtons = [
+        { x: bx, y: by, w: bw, h: bh, id: "gameOverRestart", disabled: false },
+        { x: bx + bw + gap, y: by, w: bw, h: bh, id: "gameOverContinue", disabled: true }
+      ];
     }
 
     function drawVictory() {
@@ -3150,32 +3260,42 @@
     function drawPaused() {
       if (!state.paused || state.gameOver) return;
       ctx.save();
-      ctx.fillStyle = "rgba(2, 8, 16, 0.42)";
+      ctx.fillStyle = "rgba(2, 8, 16, 0.5)";
       ctx.fillRect(0, 0, W, H);
       ctx.fillStyle = "#cbe3ff";
       ctx.font = "700 42px 'Bungee', sans-serif";
       ctx.textAlign = "center";
-      ctx.fillText("Paused", W / 2, H / 2 - 25);
+      ctx.fillText("Paused", W / 2, H / 2 - 58);
       ctx.textAlign = "start";
       ctx.restore();
 
       const bw = 150;
-      const bh = 38;
-      const gap = 12;
+      const bh = 34;
+      const gap = 10;
       const totalW = bw * 2 + gap;
       const bx = W / 2 - totalW / 2;
-      const by = H / 2 + 15;
+      const by = H / 2 - 8;
       drawUiButton(bx, by, bw, bh, "Restart", "warn", false);
       drawUiButton(bx + bw + gap, by, bw, bh, "Resume", "primary", false);
       const row2 = by + bh + gap;
+      drawUiButton(bx, row2, bw, bh, state.autoStartWave ? "Auto Wave On" : "Auto Wave Off", state.autoStartWave ? "primary" : "base", false);
+      drawUiButton(bx + bw + gap, row2, bw, bh, state.autoUpgradeTower ? "Auto Upgrade On" : "Auto Upgrade Off", state.autoUpgradeTower ? "upgrade" : "base", false);
+      const row3 = row2 + bh + gap;
       const loadDisabled = !hasSavedGame();
-      drawUiButton(bx, row2, bw, bh, "Save", "primary", false);
-      drawUiButton(bx + bw + gap, row2, bw, bh, "Load", "primary", loadDisabled);
+      drawUiButton(bx, row3, bw, bh, "Save", "primary", false);
+      drawUiButton(bx + bw + gap, row3, bw, bh, "Load", "primary", loadDisabled);
+      const row4 = row3 + bh + gap;
+      drawUiButton(bx, row4, bw, bh, "Cloud Save", "primary", false);
+      drawUiButton(bx + bw + gap, row4, bw, bh, "Cloud Load", "primary", false);
       uiState.pauseButtons = [
         { x: bx, y: by, w: bw, h: bh, id: "restart", disabled: false },
         { x: bx + bw + gap, y: by, w: bw, h: bh, id: "resume", disabled: false },
-        { x: bx, y: row2, w: bw, h: bh, id: "save", disabled: false },
-        { x: bx + bw + gap, y: row2, w: bw, h: bh, id: "load", disabled: loadDisabled }
+        { x: bx, y: row2, w: bw, h: bh, id: "autoWave", disabled: false },
+        { x: bx + bw + gap, y: row2, w: bw, h: bh, id: "autoUpgrade", disabled: false },
+        { x: bx, y: row3, w: bw, h: bh, id: "save", disabled: false },
+        { x: bx + bw + gap, y: row3, w: bw, h: bh, id: "load", disabled: loadDisabled },
+        { x: bx, y: row4, w: bw, h: bh, id: "cloudSave", disabled: false },
+        { x: bx + bw + gap, y: row4, w: bw, h: bh, id: "cloudLoad", disabled: false }
       ];
     }
 
@@ -3283,12 +3403,15 @@
     canvas.addEventListener("mousedown", (e) => {
       if (!state.gameOver) return;
       const p = worldPos(e);
-      const r = uiState.restartButton;
-      if (r && p.x >= r.x && p.x <= r.x + r.w && p.y >= r.y && p.y <= r.y + r.h) {
-        resetGame();
-        state.screen = "play";
-        state.messageAt = Date.now();
-        startLoop();
+      const btns = uiState.gameOverButtons || [];
+      for (const btn of btns) {
+        if (btn.id === "gameOverRestart" && !btn.disabled && p.x >= btn.x && p.x <= btn.x + btn.w && p.y >= btn.y && p.y <= btn.y + btn.h) {
+          resetGame();
+          state.screen = "play";
+          state.messageAt = Date.now();
+          startLoop();
+          break;
+        }
       }
     });
 
@@ -3318,6 +3441,7 @@
         updateMeteorEffects(dt);
         updateParticles(dt);
         updateHazards(dt);
+        tryAutoUpgradeSelectedTower();
       }
 
       if (state.waveInProgress && state.toSpawn <= 0) {
@@ -3337,6 +3461,10 @@
         }
         updateHUD();
         updateButtons();
+        if (state.autoStartWave && !state.nextWaveDisabled && !state.victory) {
+          state.waveReadyGlow = false;
+          startWave(false);
+        }
       }
 
       if (!state.gameOver) {
@@ -3397,6 +3525,8 @@
         mode: state.screen,
         paused: state.paused,
         gameOver: state.gameOver,
+        autoStartWave: state.autoStartWave,
+        autoUpgradeTower: state.autoUpgradeTower,
         wave: state.wave,
         gold: Math.floor(state.gold),
         hp: state.health,

@@ -490,7 +490,7 @@
       venom: {
         name: "Venom Spire",
         desc: "Poisons targets over time.",
-        cost: 800,
+        cost: 1000,
         range: 196,
         fireRate: 0.3,
         damage: 64,
@@ -518,7 +518,7 @@
       storm: {
         name: "Storm Arc",
         desc: "Lightning chains across enemies.",
-        cost: 500,
+        cost: 550,
         range: 204,
         fireRate: 0.72,
         damage: 300,
@@ -542,9 +542,9 @@
       ion: {
         name: "Ion Lattice",
         desc: "Marks targets to amplify damage.",
-        cost: 1000,
+        cost: 1200,
         range: 216,
-        fireRate: 0.62,
+        fireRate: 0.64,
         damage: 142,
         ionMarkAmp: 1.36,
         ionMarkTime: 3.6,
@@ -1044,7 +1044,14 @@
     }
 
     function getHpScale(wave) {
-      return (1.78 + wave * 0.48) * (1 + wave * 0.022);
+      const baseScale = (1.78 + wave * 0.48) * (1 + wave * 0.022);
+      const lateBoost = wave > 50 ? 1 + (wave - 50) * 0.012 : 1;
+      return baseScale * lateBoost;
+    }
+
+    function getWaveEnemyCount(wave) {
+      const cap = 30 + Math.floor(wave / 10);
+      return Math.min(cap, 11 + wave * 2);
     }
 
     function newEnemy(kind, wave) {
@@ -1105,7 +1112,7 @@
         const armor = 0.5;
         return { ...base, kind, hp: maxHp, maxHp, speed: 43 * speedScale, reward: Math.round(45 * rewardScale), color: "#c972ff", r: 18, armor, armorDeflect: armor * wave, coreDamage: 3 };
       }
-      const basicBoost = wave > 10 ? 1.7 : 1;
+      const basicBoost = wave > 10 ? 1.75 : 1;
       const maxHp = Math.round(88 * hpScale * basicBoost);
       return { ...base, kind: "basic", hp: maxHp, maxHp, speed: 72 * speedScale, reward: Math.round(9 * rewardScale), color: "#75e9a7", r: 12 };
     }
@@ -1131,7 +1138,7 @@
         }
       }
 
-      const count = Math.min(30, 11 + state.wave * 2);
+      const count = getWaveEnemyCount(state.wave);
       state.toSpawn += count;
       if (state.spawnTimer <= 0) state.spawnTimer = 0.36;
       state.message = manual
@@ -1207,7 +1214,7 @@
       if (!state.waveInProgress || state.toSpawn <= 0) return;
       state.spawnTimer -= dt;
       if (state.spawnTimer <= 0) {
-        const total = Math.min(30, 11 + state.wave * 2);
+        const total = getWaveEnemyCount(state.wave);
         const spawnedIndex = total - state.toSpawn;
         state.enemies.push(newEnemy(pickEnemyType(state.wave, spawnedIndex), state.wave));
         state.toSpawn -= 1;

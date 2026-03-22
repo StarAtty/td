@@ -506,7 +506,7 @@
         range: 196,
         fireRate: 1.02,
         damage: 168,
-        armorShred: 0.03,
+        armorShred: 0.04,
         burningCycle: 4,
         burningDps: 256,
         burningTime: 4.2,
@@ -1161,7 +1161,7 @@
       }
       if (kind === "armored") {
         const maxHp = Math.round(192 * hpScale);
-        const armor = 0.3;
+        const armor = 0.28;
         return { ...base, kind, hp: maxHp, maxHp, speed: 51 * speedScale, reward: Math.round(18 * rewardScale), color: "#9bb5c9", r: 14, armor, armorDeflect: armor * wave };
       }
       if (kind === "striker") {
@@ -1171,7 +1171,7 @@
       }
       if (kind === "bulwark") {
         const maxHp = Math.round(270 * hpScale);
-        const armor = 0.4;
+        const armor = 0.36;
         return { ...base, kind, hp: maxHp, maxHp, speed: 47 * speedScale, reward: Math.round(22 * rewardScale), color: "#8aa0b8", r: 16, armor, armorDeflect: armor * wave };
       }
       if (kind === "tank") {
@@ -1776,41 +1776,6 @@
     }
 
     function handleCanvasPress(x, y) {
-      if (state.gameOver) {
-        const btns = uiState.gameOverButtons || [];
-        for (const btn of btns) {
-          if (hitRect(x, y, btn) && !btn.disabled) {
-            if (btn.id === "gameOverRestart") {
-              resetGame();
-              state.screen = "play";
-              state.messageAt = Date.now();
-              startLoop();
-            }
-            return;
-          }
-        }
-        return;
-      }
-      if (state.victory) {
-        const btns = uiState.victoryButtons || [];
-        for (const btn of btns) {
-          if (hitRect(x, y, btn)) {
-            if (btn.id === "victoryRestart") {
-              resetGame();
-              state.screen = "play";
-              state.messageAt = Date.now();
-              startLoop();
-            }
-            if (btn.id === "victoryContinue") {
-              state.victory = false;
-              state.nextWaveDisabled = false;
-              startWave(true);
-            }
-            return;
-          }
-        }
-        return;
-      }
       if (state.menuMode) {
         for (const btn of uiState.menuButtons) {
           if (hitRect(x, y, btn) && !btn.disabled) {
@@ -1842,6 +1807,70 @@
               closeSlotMenu();
               return;
             }
+          }
+        }
+        return;
+      }
+      if (state.gameOver) {
+        for (const btn of uiState.buttons) {
+          if ((btn.id === "pause" || btn.id === "fullscreen") && hitRect(x, y, btn) && !btn.disabled) {
+            if (btn.id === "pause") {
+              resetGame();
+              state.screen = "play";
+              state.messageAt = Date.now();
+              startLoop();
+            } else {
+              handleUiAction(btn.id);
+            }
+            return;
+          }
+        }
+        const btns = uiState.gameOverButtons || [];
+        for (const btn of btns) {
+          if (hitRect(x, y, btn) && !btn.disabled) {
+            if (btn.id === "gameOverRestart") {
+              resetGame();
+              state.screen = "play";
+              state.messageAt = Date.now();
+              startLoop();
+            }
+            if (btn.id === "gameOverLoad") {
+              openSlotMenu("load");
+            }
+            return;
+          }
+        }
+        return;
+      }
+      if (state.victory) {
+        for (const btn of uiState.buttons) {
+          if ((btn.id === "pause" || btn.id === "fullscreen") && hitRect(x, y, btn) && !btn.disabled) {
+            if (btn.id === "pause") {
+              resetGame();
+              state.screen = "play";
+              state.messageAt = Date.now();
+              startLoop();
+            } else {
+              handleUiAction(btn.id);
+            }
+            return;
+          }
+        }
+        const btns = uiState.victoryButtons || [];
+        for (const btn of btns) {
+          if (hitRect(x, y, btn) && !btn.disabled) {
+            if (btn.id === "victoryRestart") {
+              resetGame();
+              state.screen = "play";
+              state.messageAt = Date.now();
+              startLoop();
+            }
+            if (btn.id === "victoryContinue") {
+              state.victory = false;
+              state.nextWaveDisabled = false;
+              startWave(true);
+            }
+            return;
           }
         }
         return;
@@ -3220,12 +3249,12 @@
       const bx = W / 2 - totalW / 2;
       const by = H / 2 + 46;
       drawUiButton(bx, by, bw, bh, "Restart", "warn", false);
-      drawUiButton(bx + bw + gap, by, bw, bh, "Continue", "primary", true);
+      drawUiButton(bx + bw + gap, by, bw, bh, "Load", "primary", !hasSavedGame());
       ctx.textAlign = "start";
       ctx.restore();
       uiState.gameOverButtons = [
         { x: bx, y: by, w: bw, h: bh, id: "gameOverRestart", disabled: false },
-        { x: bx + bw + gap, y: by, w: bw, h: bh, id: "gameOverContinue", disabled: true }
+        { x: bx + bw + gap, y: by, w: bw, h: bh, id: "gameOverLoad", disabled: !hasSavedGame() }
       ];
     }
 
@@ -3479,11 +3508,6 @@
       lastTime = t;
       step(dt);
       render();
-      if (state.gameOver) {
-        isLoopRunning = false;
-        rafId = 0;
-        return;
-      }
       rafId = requestAnimationFrame(frame);
     }
 
@@ -3515,9 +3539,9 @@
       ctx.restore();
       drawCanvasUI();
       drawPaused();
-      drawSlotMenu();
       drawGameOver();
       drawVictory();
+      drawSlotMenu();
     }
 
     window.render_game_to_text = function renderGameToText() {

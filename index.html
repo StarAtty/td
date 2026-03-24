@@ -456,8 +456,8 @@
         name: "Pulse Cannon",
         desc: "Heavy splash damage.",
         cost: 350,
-        range: 165,
-        fireRate: 1.4,
+        range: 170,
+        fireRate: 1.41,
         damage: 266,
         splash: 36,
         color: "#f3d347",
@@ -1185,7 +1185,7 @@
         return { ...base, kind, hp: maxHp, maxHp, speed: 78 * speedScale, reward: Math.round(14 * rewardScale), color: "#73ffd4", r: 11, armor, armorDeflect: armor * wave };
       }
       if (kind === "boss") {
-        const maxHp = Math.round(535 * hpScale);
+        const maxHp = Math.round(532 * hpScale);
         const armor = 0.5;
         return { ...base, kind, hp: maxHp, maxHp, speed: 42 * speedScale, reward: Math.round(45 * rewardScale), color: "#c972ff", r: 18, armor, armorDeflect: armor * wave, coreDamage: 3 };
       }

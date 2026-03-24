@@ -544,8 +544,8 @@
         desc: "Marks targets to amplify damage.",
         cost: 1200,
         range: 216,
-        fireRate: 0.64,
-        damage: 142,
+        fireRate: 0.54,
+        damage: 122,
         ionMarkAmp: 1.36,
         ionMarkTime: 3.6,
         color: "#72ffd0",
@@ -1122,7 +1122,7 @@
     function getHpScale(wave) {
       const baseScale = (1.78 + wave * 0.48) * (1 + wave * 0.022);
       const midBoost = wave > 10 ? 1 + (wave - 10) * 0.01 : 1;
-      const lateBoost = wave > 50 ? 1 + (wave - 50) * 0.002 : 1;
+      const lateBoost = wave > 50 ? 1.003 : 1;
       return baseScale * midBoost * lateBoost;
     }
 
@@ -1185,7 +1185,7 @@
         return { ...base, kind, hp: maxHp, maxHp, speed: 78 * speedScale, reward: Math.round(14 * rewardScale), color: "#73ffd4", r: 11, armor, armorDeflect: armor * wave };
       }
       if (kind === "boss") {
-        const maxHp = Math.round(540 * hpScale);
+        const maxHp = Math.round(535 * hpScale);
         const armor = 0.5;
         return { ...base, kind, hp: maxHp, maxHp, speed: 42 * speedScale, reward: Math.round(45 * rewardScale), color: "#c972ff", r: 18, armor, armorDeflect: armor * wave, coreDamage: 3 };
       }

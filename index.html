@@ -481,11 +481,11 @@
         cost: 3600,
         range: 275,
         fireRate: 0.58,
-        damage: 1250,
+        damage: 1450,
         burstCycle: 4,
         burstPierce: 3,
         color: "#ff7e7e",
-        projectileSpeed: 1560
+        projectileSpeed: 1960
       },
       venom: {
         name: "Venom Spire",
@@ -493,7 +493,7 @@
         cost: 1000,
         range: 196,
         fireRate: 0.3,
-        damage: 64,
+        damage: 66,
         poisonDps: 160,
         poisonTime: 3.8,
         color: "#87ff94",
@@ -533,7 +533,7 @@
         desc: "Long-range bombardments.",
         cost: 6400,
         range: 284,
-        fireRate: 1.47,
+        fireRate: 1.54,
         damage: 2040,
         splash: 88,
         color: "#dbc8a5",
@@ -1121,7 +1121,7 @@
 
     function getHpScale(wave) {
       const baseScale = (1.78 + wave * 0.48) * (1 + wave * 0.022);
-      const midBoost = wave > 10 ? 1 + (wave - 10) * 0.01 : 1;
+      const midBoost = wave > 10 ? 1 + (wave - 10) * 0.011 : 1;
       const lateBoost = wave > 50 ? 1.003 : 1;
       return baseScale * midBoost * lateBoost;
     }
@@ -1711,7 +1711,7 @@
     function getUpgradeCost(tower) {
       const level = tower.level - 1;
       const earlyDiscount = level < 4 ? (0.58 + level * 0.09) : 1;
-      const raw = tower.cost * 1.72 * Math.pow(1.2, level) * (1 + Math.max(0, level - 2) * 0.09) * earlyDiscount;
+      const raw = tower.cost * 1.73 * Math.pow(1.2, level) * (1 + Math.max(0, level - 2) * 0.09) * earlyDiscount;
       return Math.ceil(raw / 5) * 5;
     }
 

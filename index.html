@@ -468,12 +468,12 @@
         desc: "Slows targets with chilled hits.",
         cost: 400,
         range: 176,
-        fireRate: 0.5,
-        damage: 54,
+        fireRate: 0.45,
+        damage: 44,
         slow: 0.76,
-        slowTime: 1.0,
+        slowTime: 1.4,
         color: "#a0a9ff",
-        projectileSpeed: 720
+        projectileSpeed: 760
       },
       rail: {
         name: "Rail Lance",
@@ -481,7 +481,7 @@
         cost: 3600,
         range: 275,
         fireRate: 0.58,
-        damage: 1450,
+        damage: 1550,
         burstCycle: 4,
         burstPierce: 3,
         color: "#ff7e7e",
@@ -494,7 +494,7 @@
         range: 196,
         fireRate: 0.3,
         damage: 66,
-        poisonDps: 160,
+        poisonDps: 150,
         poisonTime: 3.8,
         color: "#87ff94",
         projectileSpeed: 960
@@ -508,7 +508,7 @@
         damage: 118,
         armorShred: 0.04,
         burningCycle: 6,
-        burningDps: 276,
+        burningDps: 240,
         burningTime: 4.2,
         burningRadius: 62,
         dotLabel: "Burning",
@@ -556,14 +556,238 @@
         desc: "Fires multiple projectiles at once.",
         cost: 220,
         range: 146,
-        fireRate: 0.15,
-        damage: 16,
+        fireRate: 0.14,
+        damage: 15,
         pellets: 3,
         spread: 0.18,
         color: "#ff9ad8",
         projectileSpeed: 640
       }
     };
+
+    const CLOUD_KEY_MAP = {
+      gold: "g",
+      health: "h",
+      wave: "w",
+      score: "o",
+      selectedBuild: "sb",
+      statsMode: "sm",
+      waveInProgress: "wp",
+      toSpawn: "ts",
+      spawnTimer: "st",
+      nextWaveTimer: "nt",
+      nextWaveDisabled: "nd",
+      waveReadyGlow: "wg",
+      clearedWave: "cw",
+      autoStartWave: "aw",
+      autoUpgradeTower: "au",
+      meteorDamage: "md",
+      meteorReadyAt: "mr",
+      aimingMeteor: "am",
+      paused: "pz",
+      gameOver: "go",
+      victory: "vc",
+      screen: "sc",
+      message: "mg",
+      towers: "tw",
+      enemies: "en",
+      projectiles: "pr",
+      particles: "pa",
+      hazards: "hz",
+      meteorEffects: "me",
+      selectedTowerIndex: "ti",
+      selectedEnemyIndex: "ei",
+      type: "t",
+      x: "x",
+      y: "y",
+      cooldown: "cd",
+      angle: "a",
+      level: "lv",
+      totalInvested: "iv",
+      name: "nm",
+      desc: "ds",
+      cost: "ct",
+      range: "rg",
+      fireRate: "fr",
+      damage: "dg",
+      color: "cl",
+      projectileSpeed: "ps",
+      splash: "sp",
+      slow: "sl",
+      slowTime: "stt",
+      poisonDps: "pd",
+      poisonTime: "pt",
+      burningDps: "bd",
+      burningTime: "bt",
+      burningRadius: "br",
+      armorShred: "as",
+      chainTargets: "ch",
+      chainRange: "cr",
+      chainDamageFalloff: "cf",
+      ionMarkAmp: "ia",
+      ionMarkTime: "it",
+      pierceLeft: "pl",
+      spread: "sd",
+      pellets: "pp",
+      burstCycle: "bc",
+      burstPierce: "bp",
+      burningCycle: "by",
+      dotLabel: "dl",
+      p: "p",
+      seg: "sg",
+      spawnWave: "sw",
+      slowFactor: "sf",
+      slowTimer: "sr",
+      poisonTimer: "ptr",
+      burningTimer: "btr",
+      damageAmp: "da",
+      damageAmpTimer: "dt",
+      damageAmpColor: "dc",
+      kind: "k",
+      maxHp: "mh",
+      speed: "vs",
+      reward: "rw",
+      r: "r",
+      armor: "ar",
+      armorDeflect: "ad",
+      coreDamage: "dm",
+      life: "lf",
+      vx: "vx",
+      vy: "vy",
+      hitRadius: "hr",
+      maxLife: "ml",
+      age: "ag",
+      activeDelay: "ay",
+      impactAt: "im",
+      done: "dn",
+      shotCount: "sh",
+      upgradeFx: "uf"
+    };
+    const CLOUD_KEY_MAP_REVERSE = Object.fromEntries(Object.entries(CLOUD_KEY_MAP).map(([k, v]) => [v, k]));
+    const CLOUD_STATE_DEFAULTS = {
+      gold: 120,
+      health: 20,
+      wave: 0,
+      score: 0,
+      selectedBuild: null,
+      statsMode: "unit",
+      waveInProgress: false,
+      toSpawn: 0,
+      spawnTimer: 0,
+      nextWaveTimer: WAVE_INTERVAL_S,
+      nextWaveDisabled: false,
+      waveReadyGlow: false,
+      clearedWave: 0,
+      autoStartWave: false,
+      autoUpgradeTower: false,
+      meteorDamage: METEOR_DAMAGE,
+      meteorReadyAt: 0,
+      aimingMeteor: false,
+      paused: false,
+      gameOver: false,
+      victory: false,
+      screen: "start",
+      message: "",
+      towers: [],
+      enemies: [],
+      projectiles: [],
+      particles: [],
+      hazards: [],
+      meteorEffects: [],
+      selectedTowerIndex: -1,
+      selectedEnemyIndex: -1
+    };
+    const CLOUD_TOWER_FIELDS = [
+      "cooldown", "angle", "level", "totalInvested", "damage", "range", "fireRate", "projectileSpeed",
+      "splash", "slow", "slowTime", "poisonDps", "poisonTime", "burningDps", "burningTime", "burningRadius",
+      "armorShred", "chainTargets", "chainRange", "chainDamageFalloff", "ionMarkAmp", "ionMarkTime",
+      "pellets", "spread", "burstCycle", "burstPierce", "burningCycle", "dotLabel", "shotCount", "upgradeFx"
+    ];
+    const CLOUD_PROJECTILE_FIELDS = [
+      "x", "y", "vx", "vy", "life", "type", "damage", "splash", "slow", "slowTime", "poisonDps", "poisonTime",
+      "burningDps", "burningTime", "burningRadius", "armorShred", "chainTargets", "chainRange",
+      "chainDamageFalloff", "ionMarkAmp", "ionMarkTime", "pierceLeft", "color", "hitRadius"
+    ];
+
+    function pruneCloudValue(value, defaults = undefined) {
+      if (Array.isArray(value)) {
+        if (!value.length && Array.isArray(defaults) && !defaults.length) return undefined;
+        return value.map((entry) => pruneCloudValue(entry));
+      }
+      if (!value || typeof value !== "object") {
+        return defaults !== undefined && value === defaults ? undefined : value;
+      }
+      const out = {};
+      for (const [key, inner] of Object.entries(value)) {
+        const nextDefaults = defaults && typeof defaults === "object" && !Array.isArray(defaults) ? defaults[key] : undefined;
+        const pruned = pruneCloudValue(inner, nextDefaults);
+        if (pruned !== undefined) out[key] = pruned;
+      }
+      return Object.keys(out).length ? out : undefined;
+    }
+
+    function compactTowerForCloud(tower) {
+      const base = towerTypes[tower.type] || {};
+      const out = { type: tower.type, x: tower.x, y: tower.y };
+      const defaults = { cooldown: 0.1, angle: -Math.PI / 2, level: 1, totalInvested: base.cost, shotCount: 0, upgradeFx: 0 };
+      for (const key of CLOUD_TOWER_FIELDS) {
+        if (tower[key] == null) continue;
+        const defaultValue = defaults[key] ?? base[key];
+        if (defaultValue !== undefined && tower[key] === defaultValue) continue;
+        out[key] = tower[key];
+      }
+      return out;
+    }
+
+    function restoreTowerFromCloud(tower) {
+      const base = towerTypes[tower.type] || {};
+      return {
+        cooldown: 0.1,
+        angle: -Math.PI / 2,
+        level: 1,
+        totalInvested: base.cost,
+        ...base,
+        ...tower
+      };
+    }
+
+    function compactProjectileForCloud(projectile) {
+      const out = {};
+      for (const key of CLOUD_PROJECTILE_FIELDS) {
+        if (projectile[key] == null) continue;
+        if (key === "color" && projectile[key] === towerTypes[projectile.type]?.color) continue;
+        if (key === "hitRadius" && projectile[key] === getProjectileHitRadius({ type: projectile.type, splash: projectile.splash || 0 })) continue;
+        out[key] = projectile[key];
+      }
+      return out;
+    }
+
+    function restoreProjectileFromCloud(projectile) {
+      return {
+        ...projectile,
+        color: projectile.color ?? towerTypes[projectile.type]?.color
+      };
+    }
+
+    function remapCloudValue(value) {
+      if (Array.isArray(value)) return value.map(remapCloudValue);
+      if (!value || typeof value !== "object") return value;
+      const out = {};
+      for (const [key, inner] of Object.entries(value)) {
+        out[CLOUD_KEY_MAP[key] || key] = remapCloudValue(inner);
+      }
+      return out;
+    }
+
+    function restoreCloudValue(value) {
+      if (Array.isArray(value)) return value.map(restoreCloudValue);
+      if (!value || typeof value !== "object") return value;
+      const out = {};
+      for (const [key, inner] of Object.entries(value)) {
+        out[CLOUD_KEY_MAP_REVERSE[key] || key] = restoreCloudValue(inner);
+      }
+      return out;
+    }
 
     let state = null;
     let isLoopRunning = false;
@@ -643,6 +867,8 @@
         meteorDamage: METEOR_DAMAGE,
         meteorReadyAt: 0,
         aimingMeteor: false,
+        meteorAimX: BASE_W / 2,
+        meteorAimY: BASE_H / 2,
         paused: false,
         messageAt: Date.now(),
         gameOver: false,
@@ -744,27 +970,115 @@
       updateButtons();
     }
 
+    function bytesToBase64Url(bytes) {
+      let binary = "";
+      for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+      return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+    }
+
+    function base64UrlToBytes(text) {
+      const normalized = text.replace(/-/g, "+").replace(/_/g, "/");
+      const padded = normalized + "=".repeat((4 - (normalized.length % 4 || 4)) % 4);
+      const binary = atob(padded);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+      return bytes;
+    }
+
     function encodeCloudSave(payload) {
       try {
-        return `TD1.${btoa(unescape(encodeURIComponent(JSON.stringify(payload))))}`;
+        const compactState = {
+          ...payload.state,
+          towers: payload.state.towers.map(compactTowerForCloud),
+          projectiles: payload.state.projectiles.map(compactProjectileForCloud)
+        };
+        const prunedState = pruneCloudValue(compactState, CLOUD_STATE_DEFAULTS) || {};
+        const compactPayload = { v: payload.version, s: remapCloudValue(prunedState) };
+        const json = JSON.stringify(compactPayload);
+        const encoded = bytesToBase64Url(new TextEncoder().encode(json));
+        return `TD1-${encoded}`;
       } catch (err) {
         return "";
       }
     }
 
-    function decodeCloudSave(code) {
-      if (!code || typeof code !== "string") return null;
-      const trimmed = code.trim();
-      if (!trimmed.startsWith("TD1.")) return null;
+    function buildCloudSaveLink(code) {
       try {
-        const json = decodeURIComponent(escape(atob(trimmed.slice(4))));
-        return JSON.parse(json);
+        const url = new URL(window.location.href);
+        url.searchParams.set("cloudSave", code);
+        url.hash = "";
+        return url.toString();
       } catch (err) {
-        return null;
+        return code;
       }
     }
 
-    async function exportCloudSave() {
+    function extractCloudSaveCode(input) {
+      if (!input || typeof input !== "string") return "";
+      const trimmed = input.trim();
+      if (/^TD[12][-.]/.test(trimmed)) return trimmed;
+      try {
+        const url = new URL(trimmed);
+        return url.searchParams.get("cloudSave") || "";
+      } catch (err) {
+        return "";
+      }
+    }
+
+    async function decompressBytes(bytes) {
+      if (typeof DecompressionStream === "undefined") return null;
+      const ds = new DecompressionStream("deflate-raw");
+      const writer = ds.writable.getWriter();
+      await writer.write(bytes);
+      await writer.close();
+      return new TextDecoder().decode(await new Response(ds.readable).arrayBuffer());
+    }
+
+    async function decodeCloudSave(code) {
+      if (!code || typeof code !== "string") return null;
+      const trimmed = code.trim();
+      try {
+        if (trimmed.startsWith("TD2-")) {
+          const json = await decompressBytes(base64UrlToBytes(trimmed.slice(4)));
+          if (!json) return null;
+          const payload = JSON.parse(json);
+          const restored = restoreCloudValue(payload.s);
+          return {
+            version: payload.v,
+            state: {
+              ...CLOUD_STATE_DEFAULTS,
+              ...restored,
+              towers: (restored.towers || []).map(restoreTowerFromCloud),
+              projectiles: (restored.projectiles || []).map(restoreProjectileFromCloud)
+            }
+          };
+        }
+        if (trimmed.startsWith("TD1-")) {
+          const json = new TextDecoder().decode(base64UrlToBytes(trimmed.slice(4)));
+          const payload = JSON.parse(json);
+          if (payload.v == null) return payload;
+          const restored = restoreCloudValue(payload.s);
+          return {
+            version: payload.v,
+            state: {
+              ...CLOUD_STATE_DEFAULTS,
+              ...restored,
+              towers: (restored.towers || []).map(restoreTowerFromCloud),
+              projectiles: (restored.projectiles || []).map(restoreProjectileFromCloud)
+            }
+          };
+        }
+        if (trimmed.startsWith("TD1.")) {
+          const json = decodeURIComponent(escape(atob(trimmed.slice(4))));
+          return JSON.parse(json);
+        }
+      } catch (err) {
+        return null;
+      }
+      return null;
+    }
+
+    function exportCloudSave() {
       const payload = buildSavePayload();
       const code = encodeCloudSave(payload);
       if (!code) {
@@ -773,26 +1087,43 @@
         updateButtons();
         return;
       }
+      const cloudLink = buildCloudSaveLink(code);
       try {
         if (navigator.clipboard && navigator.clipboard.writeText) {
-          await navigator.clipboard.writeText(code);
-          state.message = "Cloud save code copied.";
+          navigator.clipboard.writeText(cloudLink).then(() => {
+            state.message = "Cloud save link copied.";
+            state.messageAt = Date.now();
+            updateButtons();
+          }).catch(() => {
+            window.prompt("Copy cloud save link", cloudLink);
+            state.message = "Cloud save link ready.";
+            state.messageAt = Date.now();
+            updateButtons();
+          });
+          return;
         } else {
-          window.prompt("Copy cloud save code", code);
-          state.message = "Cloud save code ready.";
+          window.prompt("Copy cloud save link", cloudLink);
+          state.message = "Cloud save link ready.";
         }
       } catch (err) {
-        window.prompt("Copy cloud save code", code);
-        state.message = "Cloud save code ready.";
+        window.prompt("Copy cloud save link", cloudLink);
+        state.message = "Cloud save link ready.";
       }
       state.messageAt = Date.now();
       updateButtons();
     }
 
-    function importCloudSave() {
-      const code = window.prompt("Paste cloud save code");
-      if (!code) return;
-      const payload = decodeCloudSave(code);
+    async function importCloudSave() {
+      const input = window.prompt("Paste cloud save code or link");
+      if (!input) return;
+      const code = extractCloudSaveCode(input);
+      if (!code) {
+        state.message = "Cloud save invalid.";
+        state.messageAt = Date.now();
+        updateButtons();
+        return;
+      }
+      const payload = await decodeCloudSave(code);
       if (!payload || !applySavePayload(payload)) {
         state.message = "Cloud save invalid.";
         state.messageAt = Date.now();
@@ -800,6 +1131,34 @@
         return;
       }
       if (!isLoopRunning) startLoop();
+    }
+
+    async function tryAutoLoadCloudSaveFromUrl() {
+      let code = "";
+      try {
+        code = new URL(window.location.href).searchParams.get("cloudSave") || "";
+      } catch (err) {
+        return false;
+      }
+      if (!code) return false;
+      const payload = await decodeCloudSave(code);
+      if (!payload || !applySavePayload(payload)) {
+        state.message = "Cloud save link invalid.";
+        state.messageAt = Date.now();
+        updateButtons();
+        return false;
+      }
+      try {
+        const url = new URL(window.location.href);
+        url.searchParams.delete("cloudSave");
+        window.history.replaceState({}, "", url.toString());
+      } catch (err) {
+        // Ignore URL cleanup issues; the loaded game is what matters.
+      }
+      state.message = "Cloud save loaded.";
+      state.messageAt = Date.now();
+      updateButtons();
+      return true;
     }
 
     function applySavePayload(payload) {
@@ -935,40 +1294,42 @@
     }
 
     function computeNextStats(t) {
-      const earlyBoost = t.level < 5 ? (1.28 - t.level * 0.03) : 1;
+      const earlyBoost = t.level < 5 ? (1.1 - t.level * 0.035) : 1;
       const nextLevel = t.level + 1;
-      let fireRate = Math.max(0.12, t.fireRate * (0.91 - (earlyBoost - 1) * 0.12));
+      const minFireRate = t.type === "scatter" ? 0.05 : 0.1;
+      let fireRate = Math.max(minFireRate, t.fireRate * (0.895 - (earlyBoost - 1) * 0.12));
       if (t.type === "dart" && nextLevel >= 6) {
+        fireRate = Math.max(0.12, fireRate * 0.93);
+      } else if (t.type === "scatter") {
+        fireRate = Math.max(minFireRate, fireRate * 0.94);
+      } else if (t.type === "rail") {
         fireRate = Math.max(0.12, fireRate * 0.94);
-      } else if (t.type === "rail") {
-        fireRate = Math.max(0.12, fireRate * 0.95);
       } else if (t.type === "mortar") {
-        fireRate = Math.max(0.12, fireRate * 0.97);
+        fireRate = Math.max(0.12, fireRate * 0.96);
       }
 
-      let damage = t.damage * (1.2 + (earlyBoost - 1) * 0.65) + 6 + (nextLevel - 1) * 1.5;
+      let damage = t.damage * (1.54 + (earlyBoost - 1) * 0.67) + 1 + (nextLevel - 1) * 1.5;
       if (t.type === "venom") {
-        damage = t.damage * (1.12 + (earlyBoost - 1) * 0.4) + 4 + (nextLevel - 1) * 0.9;
+        damage = t.damage * (1.56 + (earlyBoost - 1) * 0.5) + 5 + (nextLevel - 1) * 1.1;
       } else if (t.type === "dart" && nextLevel >= 6) {
-        const lateScale = 1.08 + (earlyBoost - 1) * 0.3;
-        damage = t.damage * lateScale + 3 + (nextLevel - 1) * 0.81;
-      } else if (t.type === "scatter" && nextLevel >= 5) {
-        const lateScale = 1.04 + (earlyBoost - 1) * 0.2;
-        damage = t.damage * lateScale + 2 + (nextLevel - 1) * 0.35;
+        const lateScale = 1.1 + (earlyBoost - 1) * 0.34;
+        damage = t.damage * lateScale + 4 + (nextLevel - 1) * 1;
+      } else if (t.type === "scatter") {
+        damage = t.damage * (1.1 + (earlyBoost - 1) * 0.28) + 3 + (nextLevel - 1) * 0.6;
       } else if (t.type === "rail") {
-        damage = t.damage * (1.26 + (earlyBoost - 1) * 0.7) + 18 + (nextLevel - 1) * 3.2;
+        damage = t.damage * (1.41 + (earlyBoost - 1) * 0.78) + 22 + (nextLevel - 1) * 4;
       } else if (t.type === "mortar") {
-        damage = t.damage * (1.24 + (earlyBoost - 1) * 0.7) + 24 + (nextLevel - 1) * 4.2;
+        damage = t.damage * (1.47 + (earlyBoost - 1) * 0.76) + 28 + (nextLevel - 1) * 3.7;
       }
 
-      const range = t.range + 2 + (earlyBoost - 1) * 8;
-      const projectileSpeed = t.projectileSpeed * (1.04 + (earlyBoost - 1) * 0.03);
+      const range = t.range + 2 + (earlyBoost - 1) * 9;
+      const projectileSpeed = t.projectileSpeed * (1.05 + (earlyBoost - 1) * 0.035);
       const slow = t.slow ? Math.max(0.35, t.slow - 0.04) : 0;
       const slowTime = t.slowTime ? t.slowTime + 0.12 : 0;
-      const poisonDps = t.poisonDps ? t.poisonDps * (t.type === "venom" ? 1.45 : 1.3) : 0;
+      const poisonDps = t.poisonDps ? t.poisonDps * (t.type === "venom" ? 1.54 : 1.22) : 0;
       const poisonTime = t.poisonTime ? t.poisonTime + 0.2 : 0;
-      const burningDps = t.burningDps ? t.burningDps * (t.type === "ember" ? 1.42 : 1.3) : 0;
-      const burningTime = t.burningTime ? t.burningTime + (t.type === "ember" ? 0.3 : 0.2) : 0;
+      const burningDps = t.burningDps ? t.burningDps * (t.type === "ember" ? 1.5 : 1.22) : 0;
+      const burningTime = t.burningTime ? t.burningTime + (t.type === "ember" ? 0.35 : 0.22) : 0;
       const markStep = t.type === "ion" ? 0.04 : 0.02;
       const ionMarkAmp = t.ionMarkAmp ? t.ionMarkAmp + markStep : 0;
       const ionMarkTime = t.ionMarkTime ? t.ionMarkTime + 0.15 : 0;
@@ -1120,7 +1481,7 @@
     }
 
     function getHpScale(wave) {
-      const baseScale = (1.78 + wave * 0.48) * (1 + wave * 0.022);
+      const baseScale = (1.8 + wave * 0.48) * (1 + wave * 0.022);
       const midBoost = wave > 10 ? 1 + (wave - 10) * 0.011 : 1;
       const lateBoost = wave > 50 ? 1.003 : 1;
       return baseScale * midBoost * lateBoost;
@@ -1182,7 +1543,7 @@
       if (kind === "leech") {
         const maxHp = Math.round(180 * hpScale);
         const armor = 0.04;
-        return { ...base, kind, hp: maxHp, maxHp, speed: 78 * speedScale, reward: Math.round(14 * rewardScale), color: "#73ffd4", r: 11, armor, armorDeflect: armor * wave };
+        return { ...base, kind, hp: maxHp, maxHp, speed: 70 * speedScale, reward: Math.round(14 * rewardScale), color: "#73ffd4", r: 11, armor, armorDeflect: armor * wave };
       }
       if (kind === "boss") {
         const maxHp = Math.round(532 * hpScale);
@@ -1194,8 +1555,10 @@
       return { ...base, kind: "basic", hp: maxHp, maxHp, speed: 72 * speedScale, reward: Math.round(9 * rewardScale), color: "#75e9a7", r: 12 };
     }
 
-    function startWave(manual = true) {
+    function startWave(manual = true, reduceMeteorCd = manual) {
       if (state.screen !== "play" || state.gameOver || state.victory) return;
+      const remainingWaveMs = Math.max(0, state.nextWaveTimer || 0) * 1000;
+      const now = Date.now();
       state.wave += 1;
       state.meteorDamage = (state.wave - 1) ? Math.round(METEOR_DAMAGE * getHpScale(state.wave) / 2.3) : METEOR_DAMAGE;
       state.waveInProgress = true;
@@ -1207,12 +1570,8 @@
         state.nextWaveDisabled = false;
         state.nextWaveTimer = WAVE_INTERVAL_S;
       }
-      if (manual) {
-        const now = Date.now();
-        if (state.meteorReadyAt > now) {
-          const earlyMs = Math.max(0, state.nextWaveTimer || 0) * 1000;
-          state.meteorReadyAt = Math.max(now, state.meteorReadyAt - earlyMs);
-        }
+      if (reduceMeteorCd && state.meteorReadyAt > now) {
+        state.meteorReadyAt = Math.max(now, state.meteorReadyAt - remainingWaveMs);
       }
 
       const count = getWaveEnemyCount(state.wave);
@@ -1412,6 +1771,7 @@
             vy: Math.sin(shotAngle) * tower.projectileSpeed,
             life: 1.8,
             type: tower.type,
+            hitRadius: getProjectileHitRadius({ type: tower.type, splash: tower.splash || 0 }),
             damage: tower.damage,
             splash: tower.splash || 0,
             slow: tower.slow || 0,
@@ -1439,9 +1799,9 @@
       const amp = enemy.damageAmpTimer > 0 ? enemy.damageAmp : 1;
       let reduced = damage;
       if (!trueDamage && enemy.armor) {
-        reduced = damage * (1 - enemy.armor) - (enemy.armorDeflect ?? enemy.armor * state.wave * 0.5);
+        reduced = damage * (1 - enemy.armor) - (enemy.armorDeflect ?? enemy.armor * state.wave * 0.2);
       }
-      reduced = Math.max(0, reduced);
+      reduced = damage > 0 ? Math.max(1, reduced) : 0;
       enemy.hp -= reduced * amp;
       enemy.hp = Math.min(enemy.maxHp, enemy.hp);
       if (!quiet) {
@@ -1545,7 +1905,7 @@
 
         let didHit = false;
         for (const enemy of [...state.enemies]) {
-          if (Math.hypot(enemy.x - p.x, enemy.y - p.y) <= enemy.r + 5) {
+          if (Math.hypot(enemy.x - p.x, enemy.y - p.y) <= getEnemyHitRadius(enemy) + getProjectileHitRadius(p)) {
             if (p.splash > 0) {
               explode(p.x, p.y, p.splash, p.damage, p.color, p.slow, p.slowTime);
             } else {
@@ -1620,6 +1980,29 @@
       }
     }
 
+    function getEnemyHitRadius(enemy) {
+      if (!enemy) return 0;
+      if (enemy.kind === "armored") return enemy.r * Math.SQRT2;
+      if (enemy.kind === "fast") return enemy.r * 1.21;
+      if (enemy.kind === "swarm" || enemy.kind === "striker" || enemy.kind === "bulwark" || enemy.kind === "boss") return enemy.r + 1;
+      return enemy.r;
+    }
+
+    function getProjectileHitRadius(projectile) {
+      if (!projectile) return 0;
+      if (projectile.hitRadius != null) return projectile.hitRadius;
+      if (projectile.type === "dart") return 6;
+      if (projectile.type === "scatter") return 1.6;
+      if (projectile.type === "rail") return 9;
+      if (projectile.type === "storm") return 5;
+      if (projectile.type === "ember") return 4.8;
+      if (projectile.type === "venom") return 4.4;
+      if (projectile.type === "frost") return 7;
+      if (projectile.type === "ion") return 4.6;
+      if (projectile.type === "mortar") return 5.7;
+      return projectile.splash ? 5.5 : 3.8;
+    }
+
     function updateParticles(dt) {
       for (let i = state.particles.length - 1; i >= 0; i--) {
         const p = state.particles[i];
@@ -1670,7 +2053,7 @@
     function enemyAt(x, y) {
       for (let i = state.enemies.length - 1; i >= 0; i--) {
         const e = state.enemies[i];
-        if (Math.hypot(e.x - x, e.y - y) <= e.r + 2) return e;
+        if (Math.hypot(e.x - x, e.y - y) <= getEnemyHitRadius(e)) return e;
       }
       return null;
     }
@@ -1711,7 +2094,7 @@
     function getUpgradeCost(tower) {
       const level = tower.level - 1;
       const earlyDiscount = level < 4 ? (0.58 + level * 0.09) : 1;
-      const raw = tower.cost * 1.73 * Math.pow(1.2, level) * (1 + Math.max(0, level - 2) * 0.09) * earlyDiscount;
+      const raw = tower.cost * 1.74 * Math.pow(1.2, level) * (1 + Math.max(0, level - 2) * 0.09) * earlyDiscount;
       return Math.ceil(raw / 5) * 5;
     }
 
@@ -1767,6 +2150,8 @@
       if (now < state.meteorReadyAt) return false;
       state.meteorReadyAt = now + METEOR_CD_MS;
       state.aimingMeteor = false;
+      state.meteorAimX = x;
+      state.meteorAimY = y;
       state.statsMode = "unit";
       state.selectionLines = [];
       state.meteorEffects.push({ x, y, t: 0, impactAt: 0.34, done: false });
@@ -2044,7 +2429,7 @@
     }
 
     function toggleMeteor() {
-      if (state.gameOver) return;
+      if (state.paused || state.gameOver || state.victory) return;
       state.statsMode = "meteor";
       const now = Date.now();
       if (now < state.meteorReadyAt) {
@@ -2054,6 +2439,10 @@
         return;
       }
       state.aimingMeteor = !state.aimingMeteor;
+      if (state.aimingMeteor && mouse) {
+        state.meteorAimX = mouse.x;
+        state.meteorAimY = mouse.y;
+      }
       state.selectedBuild = null;
       state.selectedTower = null;
       if (!state.aimingMeteor) state.statsMode = "unit";
@@ -2145,6 +2534,7 @@
         return;
       }
       if (key === "m") {
+        if (state.paused) return;
         toggleMeteor();
         return;
       }
@@ -2922,8 +3312,8 @@
       if (!state.aimingMeteor || !mouse || !mouse.inside) return;
       const now = Date.now();
       if (now < state.meteorReadyAt) return;
-      const x = mouse.x;
-      const y = mouse.y;
+      const x = state.meteorAimX;
+      const y = state.meteorAimY;
 
       ctx.save();
       ctx.strokeStyle = "rgba(255, 127, 80, 0.9)";
@@ -3417,6 +3807,10 @@
       mouse.x = w.x;
       mouse.y = w.y;
       mouse.inside = w.inside;
+      if (state.aimingMeteor && !state.paused && w.inside) {
+        state.meteorAimX = w.x;
+        state.meteorAimY = w.y;
+      }
     });
     canvas.addEventListener("touchmove", (e) => {
       if (!e.touches.length) return;
@@ -3427,6 +3821,10 @@
       mouse.x = w.x;
       mouse.y = w.y;
       mouse.inside = w.inside;
+      if (state.aimingMeteor && !state.paused && w.inside) {
+        state.meteorAimX = w.x;
+        state.meteorAimY = w.y;
+      }
     }, { passive: true });
 
     canvas.addEventListener("mousedown", (e) => {
@@ -3492,7 +3890,7 @@
         updateButtons();
         if (state.autoStartWave && !state.nextWaveDisabled && !state.victory) {
           state.waveReadyGlow = false;
-          startWave(false);
+          startWave(false, true);
         }
       }
 
@@ -3582,6 +3980,7 @@
 
     resetGame();
     startLoop();
+    tryAutoLoadCloudSaveFromUrl();
   </script>
 </body>
 </html>

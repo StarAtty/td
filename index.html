@@ -1604,9 +1604,9 @@
       }
       if (kind === "finalBoss") {
         const phaseScale = 1 + Math.floor(wave / 100) * 0.35;
-        const maxHp = Math.round(1000 * hpScale * phaseScale);
-        const armor = 0.6;
-        return { ...base, kind, hp: maxHp, maxHp, speed: 24 * speedScale, reward: Math.round(180 * rewardScale), color: "#7d68a8", r: 24, armor, armorDeflect: armor * wave, coreDamage: 20 };
+        const maxHp = Math.round(2500 * hpScale * phaseScale);
+        const armor = 0.68;
+        return { ...base, kind, hp: maxHp, maxHp, speed: 25 * speedScale, reward: Math.round(180 * rewardScale), color: "#7d68a8", r: 24, armor, armorDeflect: armor * wave, coreDamage: 20 };
       }
       const basicBoost = wave > 10 ? 1.75 : 1;
       const maxHp = Math.round(88 * hpScale * basicBoost);
@@ -4244,7 +4244,15 @@
         if (awardWaveClearBonus(wave) && wave === state.wave) rewardedCurrentWave = true;
       }
 
-      if (rewardedCurrentWave && state.enemies.length === 0 && state.autoStartWave && !state.nextWaveDisabled && !state.victory) {
+      const loadedClearedWaveReady = state.autoStartWave
+        && state.wave > 0
+        && !state.waveInProgress
+        && state.enemies.length === 0
+        && state.clearedWave >= state.wave
+        && !state.nextWaveDisabled
+        && !state.victory;
+
+      if ((rewardedCurrentWave || loadedClearedWaveReady) && state.enemies.length === 0 && state.autoStartWave && !state.nextWaveDisabled && !state.victory) {
         state.waveReadyGlow = false;
         startWave(false, true);
       }

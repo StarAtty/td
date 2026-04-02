@@ -417,7 +417,7 @@
     const METEOR_RADIUS = 56;
     const METEOR_DAMAGE = 180;
     const SAVE_KEY_PREFIX = "td-save-v1-slot";
-    const SLOT_COUNT = 3;
+    const SLOT_COUNT = 6;
     const uiState = { buttons: [], buildButtons: [], pauseButtons: [], startButtons: [], menuButtons: [] };
 
     const path = [
@@ -481,7 +481,7 @@
         cost: 3600,
         range: 275,
         fireRate: 0.58,
-        damage: 1550,
+        damage: 1750,
         burstCycle: 4,
         burstPierce: 3,
         color: "#ff7e7e",
@@ -493,7 +493,7 @@
         cost: 1000,
         range: 196,
         fireRate: 0.3,
-        damage: 66,
+        damage: 48,
         poisonDps: 145,
         poisonTime: 3.2,
         color: "#87ff94",
@@ -533,7 +533,7 @@
         desc: "Long-range bombardments.",
         cost: 6400,
         range: 284,
-        fireRate: 1.54,
+        fireRate: 1.24,
         damage: 2040,
         splash: 88,
         color: "#dbc8a5",
@@ -544,12 +544,12 @@
         desc: "Marks targets to amplify damage.",
         cost: 1200,
         range: 216,
-        fireRate: 0.54,
+        fireRate: 0.51,
         damage: 122,
-        ionMarkAmp: 1.36,
-        ionMarkTime: 3.6,
+        ionMarkAmp: 1.3,
+        ionMarkTime: 3.8,
         color: "#72ffd0",
-        projectileSpeed: 790
+        projectileSpeed: 890
       },
       scatter: {
         name: "Scatter Bloom",
@@ -743,6 +743,11 @@
       return Object.keys(out).length ? out : undefined;
     }
 
+    function clonePlainData(value) {
+      if (typeof structuredClone === "function") return structuredClone(value);
+      return JSON.parse(JSON.stringify(value));
+    }
+
     function compactTowerForCloud(tower) {
       const base = towerTypes[tower.type] || {};
       const out = { type: tower.type, x: tower.x, y: tower.y };
@@ -888,6 +893,7 @@
         meteorAimX: BASE_W / 2,
         meteorAimY: BASE_H / 2,
         paused: false,
+        pauseStartedAt: 0,
         messageAt: Date.now(),
         gameOver: false,
         victory: false,
@@ -901,6 +907,13 @@
       };
       updateHUD();
       updateButtons();
+    }
+
+    function getMeteorCooldownMs() {
+      if (state.paused && state.pauseStartedAt) {
+        return Math.max(0, state.meteorReadyAt - state.pauseStartedAt);
+      }
+      return Math.max(0, state.meteorReadyAt - Date.now());
     }
 
     function getSlotKey(slot) {
@@ -956,11 +969,11 @@
           nextWaveDisabled: state.nextWaveDisabled,
           waveReadyGlow: state.waveReadyGlow,
           clearedWave: state.clearedWave,
-          waveStatus: structuredClone(state.waveStatus || {}),
+          waveStatus: clonePlainData(state.waveStatus || {}),
           autoStartWave: state.autoStartWave,
           autoUpgradeTower: state.autoUpgradeTower,
           meteorDamage: state.meteorDamage,
-          meteorReadyAt: state.meteorReadyAt,
+          meteorReadyAt: Date.now() + getMeteorCooldownMs(),
           aimingMeteor: state.aimingMeteor,
           paused: state.paused,
           gameOver: state.gameOver,
@@ -1183,7 +1196,10 @@
     }
 
     function rebuildWaveStatus(loaded) {
-      const restored = structuredClone(loaded.waveStatus || {});
+      if (loaded.waveStatus && Object.keys(loaded.waveStatus).length > 0) {
+        return clonePlainData(loaded.waveStatus);
+      }
+      const restored = {};
       for (let wave = 1; wave <= (loaded.clearedWave || 0); wave++) {
         restored[String(wave)] = { remaining: 0, rewarded: true };
       }
@@ -1223,6 +1239,7 @@
       state.selectedEnemy = enemyIndex >= 0 && enemyIndex < state.enemies.length ? state.enemies[enemyIndex] : null;
       if (state.screen !== "play" && state.screen !== "start") state.screen = "play";
       if (state.screen === "start") state.paused = false;
+      state.pauseStartedAt = state.paused ? Date.now() : 0;
       state.message = "Game loaded.";
       state.messageAt = Date.now();
       updateHUD();
@@ -1285,6 +1302,27 @@
       });
     }
 
+    function drawWrappedText(text, x, y, maxWidth, lineHeight, maxLines = Infinity) {
+      const words = String(text || "").split(/\s+/).filter(Boolean);
+      const lines = [];
+      let line = "";
+      for (const word of words) {
+        const test = line ? `${line} ${word}` : word;
+        if (ctx.measureText(test).width <= maxWidth || !line) {
+          line = test;
+        } else {
+          lines.push(line);
+          line = word;
+          if (lines.length >= maxLines) break;
+        }
+      }
+      if (line && lines.length < maxLines) lines.push(line);
+      for (let i = 0; i < lines.length; i++) {
+        ctx.fillText(lines[i], x, y + i * lineHeight);
+      }
+      return lines.length;
+    }
+
     function updateHUD() {
       return;
     }
@@ -1306,14 +1344,15 @@
         ? `Next wave in ${secs}s (Space/N)`
         : `Call Wave (${secs}s) (Space/N)`;
       pauseBtn.disabled = false;
-      pauseBtn.textContent = state.gameOver ? "↻" : (state.paused ? "▶" : "⏸");
-      pauseBtn.title = state.gameOver ? "Restart (P)" : (state.paused ? "Resume (P)" : "Pause (P)");
-      const meteorOnCooldown = Date.now() < state.meteorReadyAt;
+      pauseBtn.textContent = (state.gameOver || state.victory) ? "↻" : (state.paused ? "▶" : "⏸");
+      pauseBtn.title = (state.gameOver || state.victory) ? "Restart (P)" : (state.paused ? "Resume (P)" : "Pause (P)");
+      const meteorCooldownMs = getMeteorCooldownMs();
+      const meteorOnCooldown = meteorCooldownMs > 0;
       meteorBtn.disabled = state.paused || state.gameOver || state.victory || (meteorOnCooldown && !state.aimingMeteor);
       if (state.aimingMeteor) {
         meteorBtn.textContent = "✕";
       } else if (meteorOnCooldown) {
-        meteorBtn.textContent = `☄${Math.ceil((state.meteorReadyAt - Date.now()) / 1000)}s`;
+        meteorBtn.textContent = `☄${Math.ceil(meteorCooldownMs / 1000)}s`;
       } else {
         meteorBtn.textContent = "☄";
       }
@@ -1381,7 +1420,7 @@
       const poisonTime = t.poisonTime ? t.poisonTime + 0.2 : 0;
       const burningDps = t.burningDps ? t.burningDps * (t.type === "ember" ? 1.5 : 1.22) : 0;
       const burningTime = t.burningTime ? t.burningTime + (t.type === "ember" ? 0.35 : 0.22) : 0;
-      const markStep = t.type === "ion" ? 0.04 : 0.02;
+      const markStep = t.type === "ion" ? 0.05 : 0.02;
       const ionMarkAmp = t.ionMarkAmp ? t.ionMarkAmp + markStep : 0;
       const ionMarkTime = t.ionMarkTime ? t.ionMarkTime + 0.15 : 0;
       const pellets = t.pellets ? (t.type === "scatter" && nextLevel % 5 === 0 ? t.pellets + 1 : t.pellets) : 0;
@@ -1461,7 +1500,7 @@
       }
 
       if (state.statsMode === "meteor") {
-        const cd = Math.max(0, Math.ceil((state.meteorReadyAt - Date.now()) / 1000));
+        const cd = Math.ceil(getMeteorCooldownMs() / 1000);
         const meteorDamageNow = state.meteorDamage || METEOR_DAMAGE;
         setSelectionLines([
           { text: `METEOR | DMG ${meteorDamageNow} | Radius ${METEOR_RADIUS}`, tone: "base" },
@@ -1518,8 +1557,7 @@
         const e = state.selectedEnemy;
         let extra = "";
         if (e.armor) {
-          const flatDeflect = e.armorDeflect ?? e.armor * state.wave;
-          extra += ` | Armor ${Math.round(e.armor * 100)}% + ${flatDeflect.toFixed(2)}`;
+          extra += ` | Armor ${Math.round(e.armor * 100)}%`;
         }
         if (e.coreDamage && e.coreDamage > 1) extra += ` | Core DMG ${e.coreDamage}`;
         const enemyName = enemyCatalog[e.kind]?.name || e.kind.toUpperCase();
@@ -1534,7 +1572,7 @@
 
     function getHpScale(wave) {
       const baseScale = (1.8 + wave * 0.48) * (1 + wave * 0.022);
-      const midBoost = wave > 10 ? 1 + (wave - 10) * 0.011 : 1;
+      const midBoost = wave > 10 ? 1 + (wave - 10) * 0.013 : 1;
       const lateBoost = wave > 50 ? 1.003 : 1;
       return baseScale * midBoost * lateBoost;
     }
@@ -1575,38 +1613,38 @@
       if (kind === "armored") {
         const maxHp = Math.round(188 * hpScale);
         const armor = 0.28;
-        return { ...base, kind, hp: maxHp, maxHp, speed: 51 * speedScale, reward: Math.round(18 * rewardScale), color: "#9bb5c9", r: 14, armor, armorDeflect: armor * wave };
+        return { ...base, kind, hp: maxHp, maxHp, speed: 51 * speedScale, reward: Math.round(18 * rewardScale), color: "#9bb5c9", r: 14, armor };
       }
       if (kind === "striker") {
         const maxHp = Math.round(120 * hpScale);
         const armor = 0.08;
-        return { ...base, kind, hp: maxHp, maxHp, speed: 90 * speedScale, reward: Math.round(10 * rewardScale), color: "#ffb778", r: 11, armor, armorDeflect: armor * wave };
+        return { ...base, kind, hp: maxHp, maxHp, speed: 90 * speedScale, reward: Math.round(10 * rewardScale), color: "#ffb778", r: 11, armor };
       }
       if (kind === "bulwark") {
         const maxHp = Math.round(270 * hpScale);
         const armor = 0.36;
-        return { ...base, kind, hp: maxHp, maxHp, speed: 45 * speedScale, reward: Math.round(22 * rewardScale), color: "#8aa0b8", r: 16, armor, armorDeflect: armor * wave };
+        return { ...base, kind, hp: maxHp, maxHp, speed: 45 * speedScale, reward: Math.round(22 * rewardScale), color: "#8aa0b8", r: 16, armor };
       }
       if (kind === "tank") {
         const maxHp = Math.round(225 * hpScale);
         const armor = 0.2;
-        return { ...base, kind, hp: maxHp, maxHp, speed: 48 * speedScale, reward: Math.round(16 * rewardScale), color: "#f16f8a", r: 15, armor, armorDeflect: armor * wave };
+        return { ...base, kind, hp: maxHp, maxHp, speed: 48 * speedScale, reward: Math.round(16 * rewardScale), color: "#f16f8a", r: 15, armor };
       }
       if (kind === "leech") {
         const maxHp = Math.round(180 * hpScale);
         const armor = 0.04;
-        return { ...base, kind, hp: maxHp, maxHp, speed: 70 * speedScale, reward: Math.round(14 * rewardScale), color: "#73ffd4", r: 11, armor, armorDeflect: armor * wave };
+        return { ...base, kind, hp: maxHp, maxHp, speed: 70 * speedScale, reward: Math.round(14 * rewardScale), color: "#73ffd4", r: 11, armor };
       }
       if (kind === "boss") {
         const maxHp = Math.round(532 * hpScale);
         const armor = 0.5;
-        return { ...base, kind, hp: maxHp, maxHp, speed: 42 * speedScale, reward: Math.round(45 * rewardScale), color: "#c972ff", r: 18, armor, armorDeflect: armor * wave, coreDamage: 3 };
+        return { ...base, kind, hp: maxHp, maxHp, speed: 42 * speedScale, reward: Math.round(45 * rewardScale), color: "#c972ff", r: 18, armor, coreDamage: 3 };
       }
       if (kind === "finalBoss") {
         const phaseScale = 1 + Math.floor(wave / 100) * 0.35;
         const maxHp = Math.round(2500 * hpScale * phaseScale);
         const armor = 0.68;
-        return { ...base, kind, hp: maxHp, maxHp, speed: 25 * speedScale, reward: Math.round(180 * rewardScale), color: "#7d68a8", r: 24, armor, armorDeflect: armor * wave, coreDamage: 20 };
+        return { ...base, kind, hp: maxHp, maxHp, speed: 25 * speedScale, reward: Math.round(180 * rewardScale), color: "#7d68a8", r: 24, armor, coreDamage: 20 };
       }
       const basicBoost = wave > 10 ? 1.75 : 1;
       const maxHp = Math.round(88 * hpScale * basicBoost);
@@ -1903,7 +1941,7 @@
       const amp = enemy.damageAmpTimer > 0 ? enemy.damageAmp : 1;
       let reduced = damage;
       if (!trueDamage && enemy.armor) {
-        reduced = damage * (1 - enemy.armor) - (enemy.armorDeflect ?? enemy.armor * state.wave * 0.2);
+        reduced = damage * (1 - enemy.armor);
       }
       reduced = damage > 0 ? Math.max(1, reduced) : 0;
       enemy.hp -= reduced * amp;
@@ -2027,10 +2065,6 @@
               }
               if (p.armorShred > 0) {
                 enemy.armor = Math.max(0, (enemy.armor || 0) - p.armorShred);
-                if (enemy.armorDeflect != null) {
-                  const baseWave = enemy.spawnWave || state.wave;
-                  enemy.armorDeflect = Math.max(0, enemy.armorDeflect - p.armorShred * baseWave);
-                }
                 burst(enemy.x, enemy.y, "#ffcc9a", 3, 8);
               }
               if (p.burningDps) {
@@ -2097,9 +2131,9 @@
       if (!projectile) return 0;
       if (projectile.hitRadius != null) return projectile.hitRadius;
       if (projectile.type === "dart") return 6;
-      if (projectile.type === "scatter") return 1.6;
-      if (projectile.type === "rail") return 9;
-      if (projectile.type === "storm") return 5;
+      if (projectile.type === "scatter") return 2;
+      if (projectile.type === "rail") return 11;
+      if (projectile.type === "storm") return 5.8;
       if (projectile.type === "ember") return 4.8;
       if (projectile.type === "venom") return 4.4;
       if (projectile.type === "frost") return 7;
@@ -2321,7 +2355,7 @@
           }
         }
         for (const btn of uiState.buttons) {
-          if (btn.id === "fullscreen" && hitRect(x, y, btn) && !btn.disabled) {
+          if ((btn.id === "fullscreen" || btn.id === "closeMenu") && hitRect(x, y, btn) && !btn.disabled) {
             handleUiAction(btn.id);
             return;
           }
@@ -2511,6 +2545,11 @@
       if (id === "save") openSlotMenu("save");
       if (id === "load") openSlotMenu("load");
       if (id === "encyclopedia") openEncyclopedia(state.encyclopediaTab, state.encyclopediaKey);
+      if (id === "closeMenu") {
+        const returnToGame = state.menuMode === "encyclopedia" && state.menuFrom === "play";
+        closeSlotMenu();
+        if (returnToGame && state.paused) togglePause();
+      }
       if (id === "cloudSave") exportCloudSave();
       if (id === "cloudLoad") importCloudSave();
       if (id === "start") {
@@ -2570,9 +2609,9 @@
     function toggleMeteor() {
       if (state.paused || state.gameOver || state.victory) return;
       state.statsMode = "meteor";
-      const now = Date.now();
-      if (now < state.meteorReadyAt) {
-        const remain = Math.ceil((state.meteorReadyAt - now) / 1000);
+      const remainMs = getMeteorCooldownMs();
+      if (remainMs > 0) {
+        const remain = Math.ceil(remainMs / 1000);
         state.message = `Meteor cooldown: ${remain}s`;
         updateButtons();
         return;
@@ -2598,7 +2637,17 @@
         startLoop();
         return;
       }
-      state.paused = !state.paused;
+      if (state.paused) {
+        const pausedFor = state.pauseStartedAt ? Date.now() - state.pauseStartedAt : 0;
+        if (pausedFor > 0 && state.meteorReadyAt > 0) {
+          state.meteorReadyAt += pausedFor;
+        }
+        state.pauseStartedAt = 0;
+        state.paused = false;
+      } else {
+        state.paused = true;
+        state.pauseStartedAt = Date.now();
+      }
       state.message = state.paused ? "Paused." : "Resumed.";
       updateButtons();
     }
@@ -2686,7 +2735,9 @@
 
     window.addEventListener("keydown", (e) => {
       const key = e.key.toLowerCase();
+      const inGame = state.screen === "play" && !state.menuMode && !state.gameOver && !state.victory;
       if (e.ctrlKey && key === "]") {
+        if (!inGame) return;
         state.gold += 10000;
         state.message = "Cheat gold +10000.";
         updateHUD();
@@ -2694,6 +2745,7 @@
         return;
       }
       if (e.ctrlKey && key === "'") {
+        if (!inGame) return;
         state.wave = 100;
         state.clearedWave = 100;
         state.waveInProgress = false;
@@ -2707,9 +2759,11 @@
         return;
       }
       if (e.ctrlKey && key === "[") {
+        if (!inGame) return;
         cheatCallWave100();
         return;
       }
+      if (!inGame) return;
       if (key === "f") {
         toggleFullscreen();
         return;
@@ -2724,11 +2778,11 @@
         return;
       }
       if (key === "g") {
-        if (!state.gameOver && !state.victory) toggleAutoStartWave();
+        toggleAutoStartWave();
         return;
       }
       if (key === "h") {
-        if (!state.gameOver && !state.victory) toggleAutoUpgradeTower();
+        toggleAutoUpgradeTower();
         return;
       }
       if (state.paused) return;
@@ -3186,6 +3240,21 @@
       ctx.closePath();
     }
 
+    function pathRoundedRect(x, y, w, h, r) {
+      const radius = Math.max(0, Math.min(r, w / 2, h / 2));
+      ctx.beginPath();
+      ctx.moveTo(x + radius, y);
+      ctx.lineTo(x + w - radius, y);
+      ctx.quadraticCurveTo(x + w, y, x + w, y + radius);
+      ctx.lineTo(x + w, y + h - radius);
+      ctx.quadraticCurveTo(x + w, y + h, x + w - radius, y + h);
+      ctx.lineTo(x + radius, y + h);
+      ctx.quadraticCurveTo(x, y + h, x, y + h - radius);
+      ctx.lineTo(x, y + radius);
+      ctx.quadraticCurveTo(x, y, x + radius, y);
+      ctx.closePath();
+    }
+
     function drawEnemies() {
       for (const e of state.enemies) {
         ctx.save();
@@ -3366,12 +3435,12 @@
           ctx.fill();
         } else if (p.type === "scatter") {
           ctx.beginPath();
-          ctx.arc(0, 0, 1.6, 0, Math.PI * 2);
+          ctx.arc(0, 0, 2, 0, Math.PI * 2);
           ctx.fill();
         } else if (p.type === "rail") {
-          ctx.fillRect(-7, -1.8, 14, 3.6);
+          ctx.fillRect(-8, -2.1, 16, 4.2);
           ctx.fillStyle = "rgba(255, 230, 230, 0.8)";
-          ctx.fillRect(4, -1.1, 5, 2.2);
+          ctx.fillRect(4.5, -1.25, 5.5, 2.5);
         } else if (p.type === "storm" || p.chainTargets > 0) {
           ctx.beginPath();
           ctx.moveTo(5, -4);
@@ -3594,7 +3663,7 @@
       ctx.restore();
     }
 
-    function drawTopRightControls(showPause = true) {
+    function drawTopRightControls(showPause = true, pauseId = "pause") {
       const layout = getUiLayout();
       const btnW = 30;
       const btnH = 20;
@@ -3605,7 +3674,7 @@
       const fsLabel = document.fullscreenElement ? "⤡" : "⤢";
       if (showPause) {
         drawUiButton(pauseX, btnY, btnW, btnH, pauseBtn.textContent, "base", false);
-        uiState.buttons.push({ x: pauseX, y: btnY, w: btnW, h: btnH, id: "pause", disabled: false });
+        uiState.buttons.push({ x: pauseX, y: btnY, w: btnW, h: btnH, id: pauseId, disabled: false });
       }
       drawUiButton(fsX, btnY, btnW, btnH, fsLabel, "base", false);
       uiState.buttons.push({ x: fsX, y: btnY, w: btnW, h: btnH, id: "fullscreen", disabled: false });
@@ -3868,7 +3937,7 @@
         { x: bx, y: by, w: bw, h: bh, id: "gameOverRestart", disabled: false },
         { x: bx + bw + gap, y: by, w: bw, h: bh, id: "gameOverLoad", disabled: !hasSavedGame() }
       ];
-      drawTopRightControls();
+      drawTopRightControls(true);
     }
 
     function drawVictory() {
@@ -3897,7 +3966,7 @@
       ];
       ctx.textAlign = "start";
       ctx.restore();
-      drawTopRightControls();
+      drawTopRightControls(true);
     }
 
     function drawPaused() {
@@ -3962,13 +4031,13 @@
       ctx.textAlign = "center";
       ctx.fillText("Encyclopedia", W / 2, 84);
 
-      const panelX = 124;
-      const panelY = 110;
+      const panelX = 96;
+      const panelY = 108;
       const panelW = W - panelX * 2;
-      const panelH = H - 180;
-      const listW = 220;
-      const tabW = 120;
-      const tabH = 30;
+      const panelH = H - 174;
+      const listW = 270;
+      const tabW = 126;
+      const tabH = 32;
       const tabY = panelY;
       const leftTabX = panelX;
       const rightTabX = leftTabX + tabW + 10;
@@ -3979,62 +4048,81 @@
 
       const bodyY = panelY + tabH + 14;
       const bodyH = panelH - tabH - 14;
-      ctx.fillStyle = "rgba(10, 22, 35, 0.9)";
-      ctx.strokeStyle = "rgba(170, 210, 255, 0.52)";
-      ctx.lineWidth = 1.5;
+      ctx.fillStyle = "rgba(8, 19, 31, 0.94)";
+      ctx.strokeStyle = "rgba(170, 210, 255, 0.58)";
+      ctx.lineWidth = 1.6;
       ctx.beginPath();
       ctx.rect(panelX, bodyY, panelW, bodyH);
       ctx.fill();
       ctx.stroke();
 
-      const listX = panelX + 12;
-      const listY = bodyY + 12;
-      const itemH = 34;
-      const listInnerH = bodyH - 24;
-      const maxRows = Math.max(1, Math.floor(listInnerH / itemH));
+      const listX = panelX + 14;
+      const listY = bodyY + 14;
+      const listH = bodyH - 28;
+      const detailX = listX + listW + 18;
+      const detailW = panelW - (detailX - panelX) - 14;
+
+      ctx.fillStyle = "rgba(10, 25, 40, 0.98)";
+      ctx.strokeStyle = "rgba(120, 164, 214, 0.42)";
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ctx.rect(listX, listY, listW, listH);
+      ctx.fill();
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.rect(detailX, listY, detailW, listH);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.fillStyle = "#8fb0d3";
+      ctx.font = "700 11px 'Space Grotesk', sans-serif";
+      ctx.textAlign = "left";
+      ctx.fillText(tab === "towers" ? "Archives" : "Archives", listX + 14, listY + 18);
+      ctx.fillText("Information", detailX + 16, listY + 18);
+
+      const itemH = 36;
+      const listInnerY = listY + 28;
+      const listInnerH = listH - 40;
+      const maxRows = 5;
       const columnCount = Math.max(1, Math.ceil(entries.length / maxRows));
       const columnGap = 8;
-      const usableListW = 220;
-      const itemW = Math.max(102, Math.floor((usableListW - columnGap * (columnCount - 1)) / columnCount));
+      const usableListW = listW - 24;
+      const itemW = Math.max(108, Math.floor((usableListW - columnGap * (columnCount - 1)) / columnCount));
       entries.forEach((entry, idx) => {
         const col = Math.floor(idx / maxRows);
         const row = idx % maxRows;
-        const x = listX + col * (itemW + columnGap);
-        const y = listY + row * itemH;
+        const x = listX + 12 + col * (itemW + columnGap);
+        const y = listInnerY + row * itemH;
         const active = entry.key === selected.key;
-        ctx.fillStyle = active ? "rgba(40, 67, 92, 0.95)" : "rgba(15, 28, 42, 0.95)";
-        ctx.strokeStyle = active ? "rgba(255, 191, 126, 0.95)" : "rgba(144, 184, 232, 0.36)";
-        ctx.beginPath();
-        ctx.rect(x, y, itemW, itemH - 4);
+        ctx.fillStyle = active ? "rgba(34, 63, 90, 0.98)" : "rgba(16, 30, 46, 0.98)";
+        ctx.strokeStyle = active ? `${entry.color || "#ffbf7e"}cc` : "rgba(144, 184, 232, 0.28)";
+        pathRoundedRect(x, y, itemW, itemH - 6, 10);
         ctx.fill();
         ctx.stroke();
         ctx.fillStyle = entry.color || "#cfe3ff";
         ctx.beginPath();
-        ctx.arc(x + 15, y + 15, 6.5, 0, Math.PI * 2);
+        ctx.arc(x + 16, y + 16, 7, 0, Math.PI * 2);
         ctx.fill();
         ctx.fillStyle = "#e9f2ff";
-        ctx.font = "600 11px 'Space Grotesk', sans-serif";
+        ctx.font = "700 11px 'Space Grotesk', sans-serif";
         ctx.textAlign = "left";
-        ctx.fillText(entry.name, x + 30, y + 13, itemW - 36);
-        ctx.fillStyle = "#9fb4cf";
-        ctx.font = "500 9px 'Space Grotesk', sans-serif";
-        ctx.fillText(entry.tag || "", x + 30, y + 24, itemW - 36);
-        uiState.menuButtons.push({ x, y, w: itemW, h: itemH - 4, id: "encyclopediaEntry", key: entry.key, disabled: false });
+        ctx.fillText(entry.name, x + 31, y + 18, itemW - 38);
+        uiState.menuButtons.push({ x, y, w: itemW, h: itemH - 6, id: "encyclopediaEntry", key: entry.key, disabled: false });
       });
 
-      const detailX = listX + usableListW + 18;
-      const detailW = panelW - (detailX - panelX) - 12;
-      ctx.fillStyle = "rgba(8, 18, 30, 0.95)";
-      ctx.beginPath();
-      ctx.rect(detailX, listY, detailW, bodyH - 24);
-      ctx.fill();
-      ctx.stroke();
       ctx.fillStyle = selected.color || "#d9f0ff";
       ctx.font = "700 20px 'Bungee', sans-serif";
-      ctx.fillText(selected.name, detailX + 16, listY + 28);
+      ctx.fillText(selected.name, detailX + 16, listY + 48);
       ctx.fillStyle = "#b9cae2";
       ctx.font = "600 12px 'Space Grotesk', sans-serif";
-      ctx.fillText(selected.desc || "", detailX + 16, listY + 52);
+      const descLines = drawWrappedText(selected.desc || "", detailX + 16, listY + 78, detailW - 34, 17, 3);
+
+      const statsBoxY = listY + 90 + descLines * 17;
+      ctx.fillStyle = "rgba(255,255,255,0.035)";
+      pathRoundedRect(detailX + 14, statsBoxY, detailW - 28, listH - (statsBoxY - listY) - 56, 14);
+      ctx.fill();
+      ctx.strokeStyle = "rgba(130, 173, 223, 0.26)";
+      ctx.stroke();
       const detailLines = tab === "towers"
         ? [
             `Cost ${selected.cost}`,
@@ -4054,15 +4142,18 @@
             `HP ${selected.maxHp}`,
             `Speed ${Math.round(selected.speed)}`,
             `Bounty ${selected.reward}`,
-            selected.armor ? `Armor ${Math.round(selected.armor * 100)}% + ${(selected.armorDeflect || 0).toFixed(2)}` : null,
+            selected.armor ? `Armor ${Math.round(selected.armor * 100)}%` : null,
             selected.coreDamage ? `Core Damage ${selected.coreDamage}` : null
           ].filter(Boolean);
-      let detailY = listY + 86;
+      ctx.fillStyle = "#8fb0d3";
+      ctx.font = "700 14px 'Space Grotesk', sans-serif";
+      ctx.fillText(tab === "towers" ? "Tower Stats" : "Enemy Stats", detailX + 30, statsBoxY + 26);
+      let detailY = statsBoxY + 50;
       ctx.fillStyle = "#d8e7fb";
-      ctx.font = "600 11px 'Space Grotesk', sans-serif";
+      ctx.font = "600 12px 'Space Grotesk', sans-serif";
       for (const line of detailLines) {
-        ctx.fillText(line, detailX + 16, detailY);
-        detailY += 18;
+        ctx.fillText(line, detailX + 30, detailY);
+        detailY += 19;
       }
 
       const backW = 140;
@@ -4072,7 +4163,7 @@
       uiState.menuButtons.push({ x: W / 2 - backW / 2, y: backY, w: backW, h: backH, id: "menuBack", disabled: false });
       ctx.textAlign = "start";
       ctx.restore();
-      drawTopRightControls();
+      drawTopRightControls(state.menuFrom === "play", "closeMenu");
     }
 
     function drawSlotMenu() {
@@ -4113,13 +4204,21 @@
 
       const bw = 240;
       const bh = 38;
-      const gap = 10;
-      const totalH = bh * SLOT_COUNT + gap * (SLOT_COUNT - 1);
-      const bx = W / 2 - bw / 2;
-      let by = H / 2 - totalH / 2 + 4;
+      const colGap = 16;
+      const rowGap = 12;
+      const cols = 2;
+      const rows = Math.ceil(SLOT_COUNT / cols);
+      const totalW = bw * cols + colGap * (cols - 1);
+      const totalH = bh * rows + rowGap * (rows - 1);
+      const startX = W / 2 - totalW / 2;
+      const startY = H / 2 - totalH / 2 + 2;
       for (let i = 1; i <= SLOT_COUNT; i++) {
         const disabled = state.menuMode === "load" && !hasSavedGame(i);
         const preview = getSlotPreview(i);
+        const col = Math.floor((i - 1) / rows);
+        const row = (i - 1) % rows;
+        const bx = startX + col * (bw + colGap);
+        const by = startY + row * (bh + rowGap);
         drawUiButton(bx, by, bw, bh, "", "primary", disabled);
         const textY = by + bh / 2 + 4;
         ctx.font = "700 12px 'Space Grotesk', sans-serif";
@@ -4147,12 +4246,11 @@
         }
         ctx.textAlign = "center";
         uiState.menuButtons.push({ x: bx, y: by, w: bw, h: bh, id: "slot", slot: i, disabled });
-        by += bh + gap;
       }
 
       const backW = 140;
       const backH = 34;
-      const backY = by + 12;
+      const backY = startY + totalH + 16;
       drawUiButton(W / 2 - backW / 2, backY, backW, backH, "Back", "primary", false);
       uiState.menuButtons.push({ x: W / 2 - backW / 2, y: backY, w: backW, h: backH, id: "menuBack", disabled: false });
       ctx.textAlign = "start";
@@ -4316,7 +4414,7 @@
         gold: Math.floor(state.gold),
         hp: state.health,
         nextWaveIn: Math.ceil(state.nextWaveTimer),
-        meteorCooldown: Math.max(0, Math.ceil((state.meteorReadyAt - Date.now()) / 1000)),
+        meteorCooldown: Math.ceil(getMeteorCooldownMs() / 1000),
         selection: {
           build: state.selectedBuild,
           tower: state.selectedTower

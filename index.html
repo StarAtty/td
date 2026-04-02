@@ -2417,9 +2417,7 @@
               startLoop();
             }
             if (btn.id === "victoryContinue") {
-              state.victory = false;
-              state.nextWaveDisabled = false;
-              startWave(true);
+              continueAfterVictory();
             }
             return;
           }
@@ -2544,6 +2542,7 @@
       if (id === "restart") restartFromPause();
       if (id === "save") openSlotMenu("save");
       if (id === "load") openSlotMenu("load");
+      if (id === "victoryContinue") continueAfterVictory();
       if (id === "encyclopedia") openEncyclopedia(state.encyclopediaTab, state.encyclopediaKey);
       if (id === "closeMenu") {
         const returnToGame = state.menuMode === "encyclopedia" && state.menuFrom === "play";
@@ -2658,6 +2657,24 @@
       state.message = "Set up quickly. First wave starts in 40s.";
       state.messageAt = Date.now();
       startLoop();
+    }
+
+    function continueAfterVictory() {
+      state.victory = false;
+      state.gameOver = false;
+      state.paused = false;
+      state.pauseStartedAt = 0;
+      state.menuMode = null;
+      state.menuFrom = null;
+      state.pendingSlot = null;
+      state.nextWaveDisabled = false;
+      state.waveReadyGlow = false;
+      state.screen = "play";
+      state.message = "Continuing beyond wave 100.";
+      state.messageAt = Date.now();
+      updateButtons();
+      startLoop();
+      startWave(true);
     }
 
     function toggleFullscreen() {

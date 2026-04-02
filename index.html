@@ -596,6 +596,7 @@
       autoStartWave: "aw",
       autoUpgradeTower: "au",
       meteorDamage: "md",
+      meteorCooldownMs: "mc",
       meteorReadyAt: "mr",
       aimingMeteor: "am",
       paused: "pz",
@@ -698,6 +699,7 @@
       autoStartWave: false,
       autoUpgradeTower: false,
       meteorDamage: METEOR_DAMAGE,
+      meteorCooldownMs: 0,
       meteorReadyAt: 0,
       aimingMeteor: false,
       paused: false,
@@ -952,6 +954,7 @@
     function buildSavePayload() {
       const selectedTowerIndex = state.selectedTower ? state.towers.indexOf(state.selectedTower) : -1;
       const selectedEnemyIndex = state.selectedEnemy ? state.enemies.indexOf(state.selectedEnemy) : -1;
+      const meteorCooldownMs = getMeteorCooldownMs();
       return {
         version: 1,
         savedAt: Date.now(),
@@ -973,7 +976,8 @@
           autoStartWave: state.autoStartWave,
           autoUpgradeTower: state.autoUpgradeTower,
           meteorDamage: state.meteorDamage,
-          meteorReadyAt: Date.now() + getMeteorCooldownMs(),
+          meteorCooldownMs,
+          meteorReadyAt: meteorCooldownMs > 0 ? Date.now() + meteorCooldownMs : 0,
           aimingMeteor: state.aimingMeteor,
           paused: state.paused,
           gameOver: state.gameOver,
@@ -1219,6 +1223,9 @@
     function applySavePayload(payload) {
       if (!payload || payload.version !== 1 || !payload.state) return false;
       const loaded = payload.state;
+      const now = Date.now();
+      const savedMeteorCooldownMs = Number.isFinite(loaded.meteorCooldownMs) ? Math.max(0, loaded.meteorCooldownMs) : null;
+      const savedMeteorReadyAt = Number.isFinite(loaded.meteorReadyAt) ? loaded.meteorReadyAt : 0;
       resetGame();
       state = {
         ...state,
@@ -1235,6 +1242,11 @@
       };
       const towerIndex = Number.isInteger(loaded.selectedTowerIndex) ? loaded.selectedTowerIndex : -1;
       const enemyIndex = Number.isInteger(loaded.selectedEnemyIndex) ? loaded.selectedEnemyIndex : -1;
+      state.meteorReadyAt = savedMeteorCooldownMs !== null
+        ? now + savedMeteorCooldownMs
+        : savedMeteorReadyAt > now
+        ? savedMeteorReadyAt
+        : 0;
       state.selectedTower = towerIndex >= 0 && towerIndex < state.towers.length ? state.towers[towerIndex] : null;
       state.selectedEnemy = enemyIndex >= 0 && enemyIndex < state.enemies.length ? state.enemies[enemyIndex] : null;
       if (state.screen !== "play" && state.screen !== "start") state.screen = "play";

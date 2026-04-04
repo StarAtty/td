@@ -568,13 +568,25 @@
       basic: { name: "Basic", desc: "Balanced runner with steady health.", tag: "Balanced" },
       swarm: { name: "Swarm", desc: "Tiny rush unit that floods lanes quickly.", tag: "Rush" },
       fast: { name: "Fast", desc: "Quick striker that pressures leaks.", tag: "Speed" },
-      armored: { name: "Armored", desc: "Frontline cube with heavy armor and deflect.", tag: "Armor" },
-      striker: { name: "Striker", desc: "Mobile attacker with light armor.", tag: "Skirmish" },
+      armored: { name: "Armored", desc: "Frontline cube with heavy armor.", tag: "Armor" },
+      striker: { name: "Striker", desc: "Mobile runner with light armor.", tag: "Skirmish" },
       bulwark: { name: "Bulwark", desc: "Slow plated wall built to absorb fire.", tag: "Wall" },
       tank: { name: "Tank", desc: "Large bruiser with durable frame.", tag: "Bruiser" },
       leech: { name: "Leech", desc: "Corrosive unit that blends sustain with pressure.", tag: "Attrition" },
       boss: { name: "Boss", desc: "Elite command unit with high armor and core damage.", tag: "Boss" },
       finalBoss: { name: "Final Boss", desc: "Century wave raid boss with extreme durability and core damage.", tag: "Final" }
+    };
+    const ENEMY_FIRST_WAVE = {
+      basic: 1,
+      leech: 3,
+      swarm: 4,
+      fast: 4,
+      striker: 4,
+      armored: 5,
+      bulwark: 5,
+      tank: 5,
+      boss: 10,
+      finalBoss: 100
     };
     const FINAL_BOSS_WAVE_TYPES = ["swarm", "fast", "basic", "striker", "leech", "armored", "tank", "bulwark", "boss"];
 
@@ -905,6 +917,8 @@
         pendingSlot: null,
         encyclopediaTab: "towers",
         encyclopediaKey: towerOrder[0],
+        encyclopediaTowerLevel: 1,
+        encyclopediaEnemyWave: 1,
         message: ""
       };
       updateHUD();
@@ -1301,6 +1315,9 @@
       state.menuFrom = state.screen;
       state.encyclopediaTab = tab;
       state.encyclopediaKey = key || (tab === "enemies" ? "basic" : towerOrder[0]);
+      state.encyclopediaTowerLevel = Math.max(1, Math.min(10, state.encyclopediaTowerLevel || 1));
+      const initialEnemyWave = ENEMY_FIRST_WAVE[state.encyclopediaKey] || 1;
+      state.encyclopediaEnemyWave = Math.max(1, Math.min(999, tab === "enemies" ? initialEnemyWave : (state.encyclopediaEnemyWave || 1)));
     }
 
     function getTowerEncyclopediaEntries() {
@@ -1308,10 +1325,106 @@
     }
 
     function getEnemyEncyclopediaEntries() {
+      const wave = Math.max(1, Math.min(999, state.encyclopediaEnemyWave || 1));
       return Object.entries(enemyCatalog).map(([key, info]) => {
-        const enemy = newEnemy(key, key === "finalBoss" ? 100 : 1);
+        const enemy = newEnemy(key, key === "finalBoss" ? Math.max(100, wave) : wave);
         return { key, type: "enemy", ...info, ...enemy };
       });
+    }
+
+    function enemyAppearsInWave(kind, wave) {
+      if (wave < 1) return false;
+      const total = getWaveEnemyCount(wave);
+      for (let i = 0; i < total; i++) {
+        if (pickEnemyType(wave, i) === kind) return true;
+      }
+      return false;
+    }
+
+    function getEnemyPreviewWaves(kind, maxWave = 999) {
+      const waves = [];
+      const start = ENEMY_FIRST_WAVE[kind] || 1;
+      for (let wave = start; wave <= maxWave; wave++) {
+        if (enemyAppearsInWave(kind, wave)) waves.push(wave);
+      }
+      return waves;
+    }
+
+    function getTowerPreviewAtLevel(type, level) {
+      const base = towerTypes[type];
+      if (!base) return null;
+      const tower = {
+        type,
+        cooldown: 0.1,
+        angle: -Math.PI / 2,
+        level: 1,
+        totalInvested: base.cost,
+        shotCount: 0,
+        ...base
+      };
+      const cappedLevel = Math.max(1, Math.min(10, level || 1));
+      while (tower.level < cappedLevel) {
+        const upgradeCost = getUpgradeCost(tower);
+        tower.totalInvested = (tower.totalInvested || tower.cost) + upgradeCost;
+        const next = computeNextStats(tower);
+        tower.level = next.level;
+        tower.damage = next.damage;
+        if (tower.splash != null) tower.splash = next.splash;
+        tower.range = next.range;
+        tower.fireRate = next.fireRate;
+        tower.projectileSpeed = next.projectileSpeed;
+        if (tower.slow != null) tower.slow = next.slow;
+        if (tower.slowTime != null) tower.slowTime = next.slowTime;
+        if (tower.poisonDps != null) tower.poisonDps = next.poisonDps;
+        if (tower.poisonTime != null) tower.poisonTime = next.poisonTime;
+        if (tower.burningDps != null) tower.burningDps = next.burningDps;
+        if (tower.burningTime != null) tower.burningTime = next.burningTime;
+        if (tower.ionMarkAmp != null) tower.ionMarkAmp = next.ionMarkAmp;
+        if (tower.ionMarkTime != null) tower.ionMarkTime = next.ionMarkTime;
+        if (tower.pellets != null) tower.pellets = next.pellets;
+        if (tower.chainTargets != null) tower.chainTargets = next.chainTargets;
+        if (tower.burstPierce != null) tower.burstPierce = next.burstPierce;
+      }
+      return tower;
+    }
+
+    function getEncyclopediaTowerDetailRows(towerPreview, nextPreview) {
+      if (!towerPreview) return [];
+      const rows = [
+        { label: "Total Cost", value: `${towerPreview.totalInvested || towerPreview.cost}`, nextValue: nextPreview ? `${nextPreview.totalInvested || nextPreview.cost}` : null, decimals: 0 },
+        { label: "Damage", value: towerPreview.damage, nextValue: nextPreview ? nextPreview.damage : null, decimals: 0 },
+        { label: "DPS", value: towerPreview.damage / towerPreview.fireRate, nextValue: nextPreview ? (nextPreview.damage / nextPreview.fireRate) : null, decimals: 1 },
+        { label: "Range", value: towerPreview.range, nextValue: nextPreview ? nextPreview.range : null, decimals: 0 },
+        { label: "Rate", value: 1 / towerPreview.fireRate, nextValue: nextPreview ? (1 / nextPreview.fireRate) : null, decimals: 2, suffix: "/s" }
+      ];
+      if (towerPreview.splash) rows.push({ label: "Splash", value: towerPreview.splash, nextValue: nextPreview ? nextPreview.splash : null, decimals: 0 });
+      if (towerPreview.slow) rows.push({ label: "Slow", value: 100 - towerPreview.slow * 100, nextValue: nextPreview ? (100 - nextPreview.slow * 100) : null, decimals: 0, suffix: "%" });
+      if (towerPreview.slowTime) rows.push({ label: "Slow Time", value: towerPreview.slowTime, nextValue: nextPreview ? nextPreview.slowTime : null, decimals: 2, suffix: "s" });
+      if (towerPreview.poisonDps) rows.push({ label: towerPreview.dotLabel || "Poison", value: towerPreview.poisonDps, nextValue: nextPreview ? nextPreview.poisonDps : null, decimals: 0, suffix: "/s" });
+      if (towerPreview.poisonTime) rows.push({ label: `${towerPreview.dotLabel || "Poison"} Time`, value: towerPreview.poisonTime, nextValue: nextPreview ? nextPreview.poisonTime : null, decimals: 2, suffix: "s" });
+      if (towerPreview.burningDps) rows.push({ label: "Burning", value: towerPreview.burningDps, nextValue: nextPreview ? nextPreview.burningDps : null, decimals: 0, suffix: "/s" });
+      if (towerPreview.burningTime) rows.push({ label: "Burn Time", value: towerPreview.burningTime, nextValue: nextPreview ? nextPreview.burningTime : null, decimals: 2, suffix: "s" });
+      if (towerPreview.chainTargets) rows.push({ label: "Chain", value: towerPreview.chainTargets, nextValue: nextPreview ? nextPreview.chainTargets : null, decimals: 0, prefix: "x" });
+      if (towerPreview.ionMarkAmp) rows.push({ label: "Mark", value: (towerPreview.ionMarkAmp - 1) * 100, nextValue: nextPreview ? ((nextPreview.ionMarkAmp - 1) * 100) : null, decimals: 0, suffix: "%" });
+      if (towerPreview.ionMarkTime) rows.push({ label: "Mark Time", value: towerPreview.ionMarkTime, nextValue: nextPreview ? nextPreview.ionMarkTime : null, decimals: 2, suffix: "s" });
+      if (towerPreview.burstPierce) rows.push({ label: "Burst Pierce", value: towerPreview.burstPierce, nextValue: nextPreview ? nextPreview.burstPierce : null, decimals: 0 });
+      if (towerPreview.pellets) rows.push({ label: "Projectiles", value: towerPreview.pellets, nextValue: nextPreview ? nextPreview.pellets : null, decimals: 0 });
+      return rows;
+    }
+
+    function formatEncyclopediaRowValue(row, value) {
+      const decimals = row.decimals || 0;
+      const text = decimals > 0 ? Number(value).toFixed(decimals) : `${Math.round(value)}`;
+      return `${row.prefix || ""}${text}${row.suffix || ""}`;
+    }
+
+    function formatEncyclopediaRowDelta(row) {
+      if (row.nextValue == null) return "";
+      const delta = row.nextValue - row.value;
+      if (Math.abs(delta) < 0.0001) return "";
+      const decimals = row.decimals || 0;
+      const text = decimals > 0 ? delta.toFixed(decimals) : `${Math.round(delta)}`;
+      return `+${row.prefix || ""}${text}${row.suffix || ""}`;
     }
 
     function drawWrappedText(text, x, y, maxWidth, lineHeight, maxLines = Infinity) {
@@ -1423,8 +1536,9 @@
       const targetDamage = targetDps * fireRate;
       const minimumUpgradeDamage = t.damage * 1.02 + 1;
       const damage = Math.max(targetDamage, minimumUpgradeDamage);
+      const splash = t.splash ? t.splash + (t.type === "mortar" ? 2 : 1.5) : 0;
 
-      const range = t.range + 2 + (earlyBoost - 1) * 9;
+      const range = t.range + 2 + (earlyBoost - 0.95) * 9;
       const projectileSpeed = t.projectileSpeed * (1.05 + (earlyBoost - 1) * 0.035);
       const slow = t.slow ? Math.max(0.35, t.slow - 0.04) : 0;
       const slowTime = t.slowTime ? t.slowTime + 0.12 : 0;
@@ -1442,6 +1556,7 @@
       return {
         level: nextLevel,
         damage,
+        splash,
         fireRate,
         range,
         projectileSpeed,
@@ -1462,7 +1577,7 @@
     function getProjectedUpgrade(t) {
       const next = computeNextStats(t);
       const nextDamage = Math.round(next.damage);
-      const nextSplash = t.splash ? Math.round(t.splash) : 0;
+      const nextSplash = next.splash ? Math.round(next.splash) : 0;
       return {
         level: next.level,
         damage: nextDamage,
@@ -1597,7 +1712,8 @@
     function newEnemy(kind, wave) {
       const hpScale = getHpScale(wave);
       const speedScale = 1 + wave * 0.01;
-      const rewardScale = 1 + wave * 0.03;
+      const post100RewardBoost = wave > 100 ? 1 + (wave - 100) * 0.01 : 1;
+      const rewardScale = (1 + wave * 0.03) * post100RewardBoost;
       const base = {
         p: 0,
         seg: 0,
@@ -2146,7 +2262,7 @@
       if (projectile.type === "scatter") return 2;
       if (projectile.type === "rail") return 11;
       if (projectile.type === "storm") return 5.8;
-      if (projectile.type === "ember") return 4.8;
+      if (projectile.type === "ember") return 5.4;
       if (projectile.type === "venom") return 4.4;
       if (projectile.type === "frost") return 7;
       if (projectile.type === "ion") return 4.6;
@@ -2280,6 +2396,7 @@
       const next = computeNextStats(t);
       t.level = next.level;
       t.damage = next.damage;
+      if (t.splash != null) t.splash = next.splash;
       t.range = next.range;
       t.fireRate = next.fireRate;
       t.projectileSpeed = next.projectileSpeed;
@@ -2334,6 +2451,31 @@
             }
             if (btn.id === "encyclopediaEntry") {
               state.encyclopediaKey = btn.key;
+              if (state.encyclopediaTab === "enemies") {
+                state.encyclopediaEnemyWave = ENEMY_FIRST_WAVE[btn.key] || 1;
+              }
+              return;
+            }
+            if (btn.id === "encyclopediaTowerLevelDelta") {
+              state.encyclopediaTowerLevel = Math.max(1, Math.min(10, (state.encyclopediaTowerLevel || 1) + btn.delta));
+              return;
+            }
+            if (btn.id === "encyclopediaEnemyWaveDelta") {
+              const waves = getEnemyPreviewWaves(state.encyclopediaKey);
+              if (!waves.length) return;
+              const currentWave = state.encyclopediaEnemyWave || waves[0];
+              let index = waves.findIndex((wave) => wave >= currentWave);
+              if (index < 0) index = waves.length - 1;
+              const step = btn.delta || 0;
+              let nextIndex = index;
+              if (Math.abs(step) > 1) {
+                nextIndex = Math.max(0, Math.min(waves.length - 1, index + step));
+              } else if (step < 0 && index > 0) {
+                nextIndex = index - 1;
+              } else if (step > 0 && index < waves.length - 1) {
+                nextIndex = index + 1;
+              }
+              state.encyclopediaEnemyWave = waves[nextIndex];
               return;
             }
             if (btn.id === "menuBack") {
@@ -3482,11 +3624,11 @@
           ctx.fill();
         } else if (p.type === "ember" || p.burningDps > 0) {
           ctx.beginPath();
-          ctx.arc(0, 0, 4.8, 0, Math.PI * 2);
+          ctx.arc(0, 0, 5.4, 0, Math.PI * 2);
           ctx.fill();
           ctx.fillStyle = "rgba(255, 207, 139, 0.65)";
           ctx.beginPath();
-          ctx.arc(-1, -1, 2.3, 0, Math.PI * 2);
+          ctx.arc(-1.1, -1.1, 2.7, 0, Math.PI * 2);
           ctx.fill();
         } else if (p.type === "venom") {
           ctx.beginPath();
@@ -4050,6 +4192,13 @@
       const selected = entries.find((entry) => entry.key === state.encyclopediaKey) || entries[0];
       if (!selected) return;
       state.encyclopediaKey = selected.key;
+      const towerLevel = Math.max(1, Math.min(10, state.encyclopediaTowerLevel || 1));
+      const validEnemyWaves = tab === "enemies" ? getEnemyPreviewWaves(selected.key) : [];
+      const enemyWave = tab === "enemies"
+        ? (validEnemyWaves.includes(state.encyclopediaEnemyWave) ? state.encyclopediaEnemyWave : (validEnemyWaves[0] || 1))
+        : Math.max(1, Math.min(999, state.encyclopediaEnemyWave || 1));
+      const towerPreview = tab === "towers" ? getTowerPreviewAtLevel(selected.key, towerLevel) : null;
+      const nextTowerPreview = tab === "towers" && towerLevel < 10 ? getTowerPreviewAtLevel(selected.key, towerLevel + 1) : null;
 
       uiState.menuButtons = [];
       ctx.save();
@@ -4063,7 +4212,7 @@
       const panelX = 96;
       const panelY = 108;
       const panelW = W - panelX * 2;
-      const panelH = H - 174;
+      const panelH = H - 158;
       const listW = 270;
       const tabW = 126;
       const tabH = 32;
@@ -4142,46 +4291,80 @@
       ctx.fillStyle = selected.color || "#d9f0ff";
       ctx.font = "700 20px 'Bungee', sans-serif";
       ctx.fillText(selected.name, detailX + 16, listY + 48);
+      const controlLabel = tab === "towers" ? `Lv ${towerLevel}` : `Wave ${enemyWave}`;
+      const controlValue = tab === "towers" ? towerLevel : enemyWave;
+      const decId = tab === "towers" ? "encyclopediaTowerLevelDelta" : "encyclopediaEnemyWaveDelta";
+      const incId = decId;
+      const minValue = tab === "towers" ? 1 : (validEnemyWaves[0] || 1);
+      const maxValue = tab === "towers" ? 10 : (validEnemyWaves[validEnemyWaves.length - 1] || 999);
+      const stepSmall = 1;
+      const stepLarge = tab === "enemies" && selected.key !== "finalBoss" ? 10 : 0;
+      const btnW = 30;
+      const btnH = 24;
+      const wideBtnW = 40;
+      const valueW = tab === "towers" ? 56 : 84;
+      const ctrlGap = 6;
+      const totalControlW = btnW + (stepLarge ? ctrlGap + wideBtnW : 0) + ctrlGap + valueW + ctrlGap + btnW + (stepLarge ? ctrlGap + wideBtnW : 0);
+      const controlX = detailX + detailW - 18 - totalControlW;
+      const controlY = listY + 30;
+      if (stepLarge) {
+        drawUiButton(controlX, controlY, wideBtnW, btnH, "<<", "base", controlValue <= minValue);
+        uiState.menuButtons.push({ x: controlX, y: controlY, w: wideBtnW, h: btnH, id: decId, delta: -stepLarge, disabled: controlValue <= minValue });
+      }
+      const minusX = controlX + (stepLarge ? wideBtnW + ctrlGap : 0);
+      drawUiButton(minusX, controlY, btnW, btnH, tab === "enemies" ? "<" : "-", "base", controlValue <= minValue);
+      uiState.menuButtons.push({ x: minusX, y: controlY, w: btnW, h: btnH, id: decId, delta: -stepSmall, disabled: controlValue <= minValue });
+      ctx.fillStyle = "#e9f2ff";
+      ctx.font = "700 12px 'Space Grotesk', sans-serif";
+      ctx.textAlign = "center";
+      const valueX = minusX + btnW + ctrlGap;
+      ctx.fillText(controlLabel, valueX + valueW / 2, controlY + 16);
+      const plusX = valueX + valueW + ctrlGap;
+      drawUiButton(plusX, controlY, btnW, btnH, tab === "enemies" ? ">" : "+", "base", controlValue >= maxValue);
+      uiState.menuButtons.push({ x: plusX, y: controlY, w: btnW, h: btnH, id: incId, delta: stepSmall, disabled: controlValue >= maxValue });
+      if (stepLarge) {
+        const plusLargeX = plusX + btnW + ctrlGap;
+        drawUiButton(plusLargeX, controlY, wideBtnW, btnH, ">>", "base", controlValue >= maxValue);
+        uiState.menuButtons.push({ x: plusLargeX, y: controlY, w: wideBtnW, h: btnH, id: incId, delta: stepLarge, disabled: controlValue >= maxValue });
+      }
+      ctx.textAlign = "left";
       ctx.fillStyle = "#b9cae2";
       ctx.font = "600 12px 'Space Grotesk', sans-serif";
       const descLines = drawWrappedText(selected.desc || "", detailX + 16, listY + 78, detailW - 34, 17, 3);
-
-      const statsBoxY = listY + 90 + descLines * 17;
+      const statsBoxY = listY + 84 + descLines * 17;
+      const statsBoxH = listH - (statsBoxY - listY) - 38;
       ctx.fillStyle = "rgba(255,255,255,0.035)";
-      pathRoundedRect(detailX + 14, statsBoxY, detailW - 28, listH - (statsBoxY - listY) - 56, 14);
+      pathRoundedRect(detailX + 14, statsBoxY, detailW - 28, statsBoxH, 14);
       ctx.fill();
       ctx.strokeStyle = "rgba(130, 173, 223, 0.26)";
       ctx.stroke();
-      const detailLines = tab === "towers"
-        ? [
-            `Cost ${selected.cost}`,
-            `Damage ${Math.round(selected.damage)}`,
-            `Range ${Math.round(selected.range)}`,
-            `Rate ${(1 / selected.fireRate).toFixed(2)}/s`,
-            selected.splash ? `Splash ${Math.round(selected.splash)}` : null,
-            selected.slow ? `Slow ${(100 - selected.slow * 100).toFixed(0)}%` : null,
-            selected.poisonDps ? `${selected.dotLabel || "Poison"} ${Math.round(selected.poisonDps)}/s` : null,
-            selected.burningDps ? `Burning ${Math.round(selected.burningDps)}/s` : null,
-            selected.chainTargets ? `Chain x${selected.chainTargets}` : null,
-            selected.ionMarkAmp ? `Mark +${Math.round((selected.ionMarkAmp - 1) * 100)}%` : null,
-            selected.burstPierce ? `Burst Pierce ${selected.burstPierce}` : null,
-            selected.pellets ? `Projectiles ${selected.pellets}` : null
-          ].filter(Boolean)
+      const detailRows = tab === "towers" && towerPreview
+        ? getEncyclopediaTowerDetailRows(towerPreview, nextTowerPreview)
         : [
-            `HP ${selected.maxHp}`,
-            `Speed ${Math.round(selected.speed)}`,
-            `Bounty ${selected.reward}`,
-            selected.armor ? `Armor ${Math.round(selected.armor * 100)}%` : null,
-            selected.coreDamage ? `Core Damage ${selected.coreDamage}` : null
+            { text: `HP ${selected.maxHp}` },
+            { text: `Speed ${Math.round(selected.speed)}` },
+            { text: `Bounty ${selected.reward}` },
+            selected.armor ? { text: `Armor ${Math.round(selected.armor * 100)}%` } : null,
+            selected.coreDamage ? { text: `Core Damage ${selected.coreDamage}` } : null
           ].filter(Boolean);
       ctx.fillStyle = "#8fb0d3";
       ctx.font = "700 14px 'Space Grotesk', sans-serif";
       ctx.fillText(tab === "towers" ? "Tower Stats" : "Enemy Stats", detailX + 30, statsBoxY + 26);
       let detailY = statsBoxY + 50;
-      ctx.fillStyle = "#d8e7fb";
+      const statTextX = detailX + 30;
+      const statDeltaX = detailX + Math.min(detailW - 72, 140);
       ctx.font = "600 12px 'Space Grotesk', sans-serif";
-      for (const line of detailLines) {
-        ctx.fillText(line, detailX + 30, detailY);
+      for (const row of detailRows) {
+        const baseText = row.text || `${row.label} ${formatEncyclopediaRowValue(row, row.value)}`;
+        ctx.fillStyle = "#d8e7fb";
+        ctx.fillText(baseText, statTextX, detailY);
+        if (!row.text) {
+          const deltaText = formatEncyclopediaRowDelta(row);
+          if (deltaText) {
+            ctx.fillStyle = row.label === "Total Cost" ? "#ffb765" : "#81f495";
+            ctx.fillText(deltaText, statDeltaX, detailY);
+          }
+        }
         detailY += 19;
       }
 

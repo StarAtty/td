@@ -199,7 +199,7 @@
     .tower-art.ember { background: radial-gradient(circle at 35% 35%, #ffd8a1, #de5f2e); }
     .tower-art.storm { background: radial-gradient(circle at 35% 35%, #d8f8ff, #4aa4dc); }
     .tower-art.mortar { background: radial-gradient(circle at 35% 35%, #f4efdd, #8e7d5e); }
-    .tower-art.ion { background: radial-gradient(circle at 35% 35%, #dbfff2, #31ba9e); }
+    .tower-art.ion { background: radial-gradient(circle at 35% 35%, #e3fff6, #64e7c6); }
     .tower-art.scatter { background: radial-gradient(circle at 35% 35%, #ffe5f2, #d273b4); }
 
     .tower-copy {
@@ -548,7 +548,7 @@
         damage: 122,
         ionMarkAmp: 1.3,
         ionMarkTime: 3.8,
-        color: "#72ffd0",
+        color: "#9fffe3",
         projectileSpeed: 890
       },
       scatter: {
@@ -1769,7 +1769,7 @@
         return { ...base, kind, hp: maxHp, maxHp, speed: 42 * speedScale, reward: Math.round(45 * rewardScale), color: "#c972ff", r: 18, armor, coreDamage: 3 };
       }
       if (kind === "finalBoss") {
-        const phaseScale = 1 + Math.floor(wave / 100) * 0.35;
+        const phaseScale = 1 + Math.floor(wave / 100) * 0.32;
         const maxHp = Math.round(2500 * hpScale * phaseScale);
         const armor = 0.68;
         return { ...base, kind, hp: maxHp, maxHp, speed: 25 * speedScale, reward: Math.round(180 * rewardScale), color: "#7d68a8", r: 24, armor, coreDamage: 20 };
@@ -3583,8 +3583,9 @@
       for (const p of state.projectiles) {
         ctx.save();
         const angle = Math.atan2(p.vy, p.vx);
-        const tailX = p.x - p.vx * 0.02;
-        const tailY = p.y - p.vy * 0.02;
+        const trailScale = p.type === "rail" ? 0.012 : 0.02;
+        const tailX = p.x - p.vx * trailScale;
+        const tailY = p.y - p.vy * trailScale;
         if (p.type !== "scatter" && p.type !== "ember") {
           ctx.strokeStyle = `${p.color}aa`;
           ctx.lineWidth = p.splash ? 2.2 : 1.5;
@@ -4498,21 +4499,6 @@
         state.meteorAimY = w.y;
       }
     }, { passive: true });
-
-    canvas.addEventListener("mousedown", (e) => {
-      if (!state.gameOver) return;
-      const p = worldPos(e);
-      const btns = uiState.gameOverButtons || [];
-      for (const btn of btns) {
-        if (btn.id === "gameOverRestart" && !btn.disabled && p.x >= btn.x && p.x <= btn.x + btn.w && p.y >= btn.y && p.y <= btn.y + btn.h) {
-          resetGame();
-          state.screen = "play";
-          state.messageAt = Date.now();
-          startLoop();
-          break;
-        }
-      }
-    });
 
     let lastTime = performance.now();
     let rafId = 0;

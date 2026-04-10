@@ -1769,12 +1769,12 @@
         return { ...base, kind, hp: maxHp, maxHp, speed: 42 * speedScale, reward: Math.round(45 * rewardScale), color: "#c972ff", r: 18, armor, coreDamage: 3 };
       }
       if (kind === "finalBoss") {
-        const phaseScale = 1 + Math.floor(wave / 100) * 0.32;
+        const phaseScale = 1 + Math.floor(wave / 100) * 0.304;
         const maxHp = Math.round(2500 * hpScale * phaseScale);
         const armor = 0.68;
         return { ...base, kind, hp: maxHp, maxHp, speed: 25 * speedScale, reward: Math.round(180 * rewardScale), color: "#7d68a8", r: 24, armor, coreDamage: 20 };
       }
-      const basicBoost = wave > 10 ? 1.75 : 1;
+      const basicBoost = wave > 10 ? 1.76 : 1;
       const maxHp = Math.round(88 * hpScale * basicBoost);
       return { ...base, kind: "basic", hp: maxHp, maxHp, speed: 72 * speedScale, reward: Math.round(9 * rewardScale), color: "#75e9a7", r: 12 };
     }

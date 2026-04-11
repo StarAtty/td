@@ -1759,7 +1759,7 @@
         return { ...base, kind, hp: maxHp, maxHp, speed: 48 * speedScale, reward: Math.round(16 * rewardScale), color: "#f16f8a", r: 15, armor };
       }
       if (kind === "leech") {
-        const maxHp = Math.round(180 * hpScale);
+        const maxHp = Math.round(176 * hpScale);
         const armor = 0.04;
         return { ...base, kind, hp: maxHp, maxHp, speed: 70 * speedScale, reward: Math.round(14 * rewardScale), color: "#73ffd4", r: 11, armor };
       }
@@ -1769,7 +1769,7 @@
         return { ...base, kind, hp: maxHp, maxHp, speed: 42 * speedScale, reward: Math.round(45 * rewardScale), color: "#c972ff", r: 18, armor, coreDamage: 3 };
       }
       if (kind === "finalBoss") {
-        const phaseScale = 1 + Math.floor(wave / 100) * 0.304;
+        const phaseScale = 1 + Math.floor(wave / 100) * 0.284;
         const maxHp = Math.round(2500 * hpScale * phaseScale);
         const armor = 0.68;
         return { ...base, kind, hp: maxHp, maxHp, speed: 25 * speedScale, reward: Math.round(180 * rewardScale), color: "#7d68a8", r: 24, armor, coreDamage: 20 };

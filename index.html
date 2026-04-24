@@ -419,28 +419,194 @@
     const SAVE_KEY_PREFIX = "td-save-v1-slot";
     const META_KEY = "td-meta-v1";
     const SLOT_COUNT = 6;
-    const uiState = { buttons: [], buildButtons: [], pauseButtons: [], startButtons: [], menuButtons: [] };
+    const uiState = { buttons: [], buildButtons: [], pauseButtons: [], startButtons: [], mapButtons: [], menuButtons: [] };
 
-    const path = [
-      { x: -48, y: 432 },
-      { x: 96, y: 432 },
-      { x: 96, y: 336 },
-      { x: 240, y: 336 },
-      { x: 240, y: 480 },
-      { x: 432, y: 480 },
-      { x: 432, y: 288 },
-      { x: 336, y: 288 },
-      { x: 336, y: 144 },
-      { x: 528, y: 144 },
-      { x: 528, y: 240 },
-      { x: 672, y: 240 },
-      { x: 672, y: 96 },
-      { x: 816, y: 96 },
-      { x: 816, y: 192 },
-      { x: 912, y: 192 },
-      { x: 912, y: 96 },
-      { x: 1008, y: 96 }
-    ];
+    const MAPS = {
+      orbital: {
+        name: "Orbital Spine",
+        theme: {
+          bgTop: "#0b1725",
+          bgBottom: "#10324a",
+          accentA: "rgba(255, 179, 71, 0.12)",
+          accentB: "rgba(77, 193, 255, 0.12)",
+          pathStart: "rgba(240, 163, 89, 0.95)",
+          pathEnd: "rgba(240, 99, 146, 0.9)",
+          decor: "nebula",
+          coreOuter: "rgba(20, 48, 65, 0.45)",
+          coreInner: "#2f6f8a",
+          coreStroke: "#8fc1d7"
+        },
+        path: [
+          { x: -48, y: 432 },
+          { x: 96, y: 432 },
+          { x: 96, y: 336 },
+          { x: 240, y: 336 },
+          { x: 240, y: 480 },
+          { x: 432, y: 480 },
+          { x: 432, y: 288 },
+          { x: 336, y: 288 },
+          { x: 336, y: 144 },
+          { x: 528, y: 144 },
+          { x: 528, y: 240 },
+          { x: 672, y: 240 },
+          { x: 672, y: 96 },
+          { x: 816, y: 96 },
+          { x: 816, y: 192 },
+          { x: 912, y: 192 },
+          { x: 912, y: 96 },
+          { x: 1008, y: 96 }
+        ]
+      },
+      asteroid: {
+        name: "Asteroid Pass",
+        theme: {
+          bgTop: "#20120e",
+          bgBottom: "#4a2617",
+          accentA: "rgba(255, 197, 121, 0.12)",
+          accentB: "rgba(255, 109, 76, 0.14)",
+          pathStart: "rgba(255, 197, 121, 0.94)",
+          pathEnd: "rgba(217, 104, 72, 0.9)",
+          decor: "asteroids",
+          coreOuter: "rgba(72, 35, 22, 0.45)",
+          coreInner: "#a45b33",
+          coreStroke: "#f2c79a"
+        },
+        path: [
+          { x: -48, y: 96 },
+          { x: 192, y: 96 },
+          { x: 192, y: 240 },
+          { x: 96, y: 240 },
+          { x: 96, y: 480 },
+          { x: 336, y: 480 },
+          { x: 336, y: 192 },
+          { x: 528, y: 192 },
+          { x: 528, y: 384 },
+          { x: 768, y: 384 },
+          { x: 768, y: 144 },
+          { x: 1008, y: 144 }
+        ]
+      },
+      aurora: {
+        name: "Aurora Rise",
+        theme: {
+          bgTop: "#071522",
+          bgBottom: "#143b61",
+          accentA: "rgba(159, 225, 255, 0.14)",
+          accentB: "rgba(120, 170, 255, 0.12)",
+          pathStart: "rgba(159,225,255,0.94)",
+          pathEnd: "rgba(120,170,255,0.9)",
+          decor: "aurora",
+          coreOuter: "rgba(21, 47, 78, 0.45)",
+          coreInner: "#4f81be",
+          coreStroke: "#c5deff"
+        },
+        path: [
+          { x: -48, y: 480 },
+          { x: 96, y: 480 },
+          { x: 96, y: 336 },
+          { x: 288, y: 336 },
+          { x: 288, y: 432 },
+          { x: 480, y: 432 },
+          { x: 480, y: 192 },
+          { x: 672, y: 192 },
+          { x: 672, y: 288 },
+          { x: 864, y: 288 },
+          { x: 864, y: 96 },
+          { x: 1008, y: 96 }
+        ]
+      },
+      delta: {
+        name: "Comet Delta",
+        theme: {
+          bgTop: "#081e1c",
+          bgBottom: "#12433d",
+          accentA: "rgba(111, 243, 214, 0.12)",
+          accentB: "rgba(76, 166, 145, 0.14)",
+          pathStart: "rgba(119, 232, 206, 0.92)",
+          pathEnd: "rgba(61, 185, 164, 0.92)",
+          decor: "comet",
+          coreOuter: "rgba(16, 52, 46, 0.45)",
+          coreInner: "#2d877a",
+          coreStroke: "#9ff2df"
+        },
+        path: [
+          { x: -48, y: 288 },
+          { x: 144, y: 288 },
+          { x: 144, y: 96 },
+          { x: 384, y: 96 },
+          { x: 384, y: 384 },
+          { x: 624, y: 384 },
+          { x: 624, y: 144 },
+          { x: 768, y: 144 },
+          { x: 768, y: 480 },
+          { x: 912, y: 480 },
+          { x: 912, y: 240 },
+          { x: 1008, y: 240 }
+        ]
+      },
+      pulsar: {
+        name: "Pulsar Switch",
+        theme: {
+          bgTop: "#191019",
+          bgBottom: "#3c2143",
+          accentA: "rgba(242, 133, 255, 0.12)",
+          accentB: "rgba(140, 121, 255, 0.12)",
+          pathStart: "rgba(242, 133, 255, 0.92)",
+          pathEnd: "rgba(126, 116, 255, 0.92)",
+          decor: "pulsar",
+          coreOuter: "rgba(43, 25, 58, 0.45)",
+          coreInner: "#7a56ac",
+          coreStroke: "#dfc8ff"
+        },
+        path: [
+          { x: -48, y: 192 },
+          { x: 192, y: 192 },
+          { x: 192, y: 48 },
+          { x: 480, y: 48 },
+          { x: 480, y: 240 },
+          { x: 288, y: 240 },
+          { x: 288, y: 432 },
+          { x: 672, y: 432 },
+          { x: 672, y: 144 },
+          { x: 864, y: 144 },
+          { x: 864, y: 480 },
+          { x: 1008, y: 480 }
+        ]
+      },
+      lunar: {
+        name: "Lunar Bloom",
+        theme: {
+          bgTop: "#0d1620",
+          bgBottom: "#233247",
+          accentA: "rgba(255, 235, 154, 0.10)",
+          accentB: "rgba(151, 209, 255, 0.12)",
+          pathStart: "rgba(255, 226, 149, 0.92)",
+          pathEnd: "rgba(155, 205, 255, 0.9)",
+          decor: "lunar",
+          coreOuter: "rgba(33, 41, 65, 0.45)",
+          coreInner: "#7088bb",
+          coreStroke: "#f1ecc2"
+        },
+        path: [
+          { x: -48, y: 240 },
+          { x: 240, y: 240 },
+          { x: 240, y: 528 },
+          { x: 480, y: 528 },
+          { x: 480, y: 288 },
+          { x: 720, y: 288 },
+          { x: 720, y: 432 },
+          { x: 864, y: 432 },
+          { x: 864, y: 144 },
+          { x: 576, y: 144 },
+          { x: 576, y: 48 },
+          { x: 1008, y: 48 }
+        ]
+      }
+    };
+    let path = MAPS.orbital.path.map((point) => ({ ...point }));
+    let buildSpots = [];
+    let buildSpotSet = new Set();
+    let roadSpotSet = new Set();
 
     const towerTypes = {
       dart: {
@@ -592,17 +758,12 @@
     const FINAL_BOSS_WAVE_TYPES = ["swarm", "fast", "basic", "striker", "leech", "armored", "tank", "bulwark", "boss"];
     const ACHIEVEMENTS = [
       { id: "firstBuild", name: "Blueprint Down", desc: "Build your first tower." },
-      { id: "builder5", name: "Outpost Line", desc: "Build 5 towers in total." },
       { id: "builder10", name: "Rapid Expansion", desc: "Build 10 towers in total." },
-      { id: "builder20", name: "Grid Commander", desc: "Build 20 towers in total." },
       { id: "builder35", name: "Battle Network", desc: "Build 35 towers in total." },
       { id: "builder50", name: "Citadel Builder", desc: "Build 50 towers in total." },
       { id: "firstUpgrade", name: "Field Retrofit", desc: "Upgrade a tower for the first time." },
-      { id: "upgrade10", name: "Systems Tune", desc: "Upgrade towers 10 times in total." },
       { id: "upgrade25", name: "Overclocked", desc: "Upgrade towers 25 times in total." },
-      { id: "upgrade50", name: "War Lab", desc: "Upgrade towers 50 times in total." },
       { id: "upgrade100", name: "Fully Calibrated", desc: "Upgrade towers 100 times in total." },
-      { id: "upgrade200", name: "Big Budget", desc: "Upgrade towers 200 times in total." },
       { id: "master_dart", name: "Needle Crown", desc: "Upgrade Dart Node to level 10." },
       { id: "master_scatter", name: "Bloom Authority", desc: "Upgrade Scatter Bloom to level 10." },
       { id: "master_cannon", name: "Pulse Overlord", desc: "Upgrade Pulse Cannon to level 10." },
@@ -614,39 +775,26 @@
       { id: "master_rail", name: "Rail Sovereign", desc: "Upgrade Rail Lance to level 10." },
       { id: "master_mortar", name: "Siegebreaker", desc: "Upgrade Siege Mortar to level 10." },
       { id: "firstMeteor", name: "From Orbit", desc: "Call Meteor once." },
-      { id: "meteor5", name: "Orbital Ping", desc: "Call Meteor 5 times." },
       { id: "meteor10", name: "Skyfall Doctrine", desc: "Call Meteor 10 times." },
-      { id: "meteor25", name: "Burning Horizon", desc: "Call Meteor 25 times." },
       { id: "meteor50", name: "Extinction Event", desc: "Call Meteor 50 times." },
-      { id: "wave5", name: "Perimeter Held", desc: "Clear wave 5." },
-      { id: "wave10", name: "Frontline Stable", desc: "Clear wave 10." },
       { id: "wave25", name: "Deep Run", desc: "Clear wave 25." },
       { id: "wave50", name: "Fortress Mode", desc: "Clear wave 50." },
-      { id: "wave75", name: "No Retreat", desc: "Clear wave 75." },
-      { id: "wave100", name: "Century Hold", desc: "Clear wave 100." },
       { id: "wave100_flawless", name: "Perfect Century", desc: "Clear wave 100 without losing HP." },
-      { id: "wave150", name: "After the Century", desc: "Clear wave 150." },
-      { id: "wave200", name: "Double Century", desc: "Clear wave 200." },
       { id: "wave300", name: "Deep Orbit", desc: "Clear wave 300." },
-      { id: "wave400", name: "Endless War", desc: "Clear wave 400." },
       { id: "wave500", name: "Impossible!", desc: "Clear wave 500." },
-      { id: "slayer100", name: "Purge Protocol", desc: "Eliminate 100 enemies in total." },
-      { id: "slayer500", name: "Kill Chain", desc: "Eliminate 500 enemies in total." },
       { id: "slayer1000", name: "Extermination", desc: "Eliminate 1000 enemies in total." },
-      { id: "slayer2500", name: "Siege Eraser", desc: "Eliminate 2500 enemies in total." },
       { id: "slayer5000", name: "Annihilation Script", desc: "Eliminate 5000 enemies in total." },
-      { id: "slayer10000", name: "Nothing Survives", desc: "Eliminate 10000 enemies in total." },
-      { id: "rich1000", name: "Reserve Fund", desc: "Hold 1000 gold at once." },
       { id: "rich5000", name: "War Chest", desc: "Hold 5000 gold at once." },
-      { id: "rich10000", name: "Treasury Core", desc: "Hold 10000 gold at once." },
       { id: "rich20000", name: "Golden Backbone", desc: "Hold 20000 gold at once." },
-      { id: "rich50000", name: "Overflow Vault", desc: "Hold 50000 gold at once." },
-      { id: "score50000", name: "Signal Booster", desc: "Reach 50000 score." },
       { id: "score100000", name: "Leaderboard Ghost", desc: "Reach 100000 score." },
-      { id: "score200000", name: "Six Figures", desc: "Reach 200000 score." },
       { id: "score500000", name: "Archive Breaker", desc: "Reach 500000 score." },
-      { id: "score1000000", name: "Legend Seed", desc: "Reach 1000000 score." },
-      { id: "score2000000", name: "Mythic Ledger", desc: "Reach 2000000 score." }
+      { id: "score2000000", name: "Mythic Ledger", desc: "Reach 2000000 score." },
+      { id: "map_orbital", name: "Orbital Spine Secured", desc: "Clear wave 100 on Orbital Spine." },
+      { id: "map_asteroid", name: "Asteroid Pass Secured", desc: "Clear wave 100 on Asteroid Pass." },
+      { id: "map_aurora", name: "Aurora Rise Secured", desc: "Clear wave 100 on Aurora Rise." },
+      { id: "map_delta", name: "Comet Delta Secured", desc: "Clear wave 100 on Comet Delta." },
+      { id: "map_pulsar", name: "Pulsar Switch Secured", desc: "Clear wave 100 on Pulsar Switch." },
+      { id: "map_lunar", name: "Lunar Bloom Secured", desc: "Clear wave 100 on Lunar Bloom." }
     ];
 
     const CLOUD_KEY_MAP = {
@@ -655,6 +803,7 @@
       wave: "w",
       score: "o",
       selectedBuild: "sb",
+      selectedMap: "mp",
       statsMode: "sm",
       waveInProgress: "wp",
       toSpawn: "ts",
@@ -763,6 +912,7 @@
       wave: 0,
       score: 0,
       selectedBuild: null,
+      selectedMap: "orbital",
       statsMode: "unit",
       waveInProgress: false,
       toSpawn: 0,
@@ -949,10 +1099,11 @@
         return {
           achievements: parsed && typeof parsed.achievements === "object" && parsed.achievements ? parsed.achievements : {},
           highScore: Number.isFinite(parsed?.highScore) ? Math.max(0, parsed.highScore) : 0,
-          highScoreWave: Number.isFinite(parsed?.highScoreWave) ? Math.max(0, parsed.highScoreWave) : 0
+          highScoreWave: Number.isFinite(parsed?.highScoreWave) ? Math.max(0, parsed.highScoreWave) : 0,
+          mapRecords: parsed && typeof parsed.mapRecords === "object" && parsed.mapRecords ? parsed.mapRecords : {}
         };
       } catch (err) {
-        return { achievements: {}, highScore: 0, highScoreWave: 0 };
+        return { achievements: {}, highScore: 0, highScoreWave: 0, mapRecords: {} };
       }
     }
 
@@ -961,7 +1112,8 @@
         localStorage.setItem(META_KEY, JSON.stringify({
           achievements: state.achievements || {},
           highScore: state.highScore || 0,
-          highScoreWave: state.highScoreWave || 0
+          highScoreWave: state.highScoreWave || 0,
+          mapRecords: state.mapRecords || {}
         }));
       } catch (err) {
         // Ignore storage issues and keep gameplay running.
@@ -979,10 +1131,11 @@
       } else if (currentHighScore > metaHighScore) {
         state.highScore = currentHighScore;
       }
+      state.mapRecords = { ...(meta.mapRecords || {}), ...(state.mapRecords || {}) };
       saveMetaProgress();
     }
 
-    function resetGame() {
+    function resetGame(map = "orbital") {
       const meta = loadMetaProgress();
       state = {
         gold: 120,
@@ -990,6 +1143,7 @@
         wave: 0,
         score: 0,
         selectedBuild: null,
+        selectedMap: map,
         selectedTower: null,
         selectedEnemy: null,
         hoverBuild: null,
@@ -1018,6 +1172,7 @@
         totalMeteors: 0,
         highScore: meta.highScore || 0,
         highScoreWave: meta.highScoreWave || 0,
+        mapRecords: { ...(meta.mapRecords || {}) },
         meteorDamage: METEOR_DAMAGE,
         meteorReadyAt: 0,
         aimingMeteor: false,
@@ -1041,12 +1196,14 @@
         menuMode: null,
         menuFrom: null,
         pendingSlot: null,
+        mapSelectPreview: "orbital",
         encyclopediaTab: "towers",
         encyclopediaKey: towerOrder[0],
         encyclopediaTowerLevel: 1,
         encyclopediaEnemyWave: 1,
         message: ""
       };
+      setActiveMap(state.selectedMap);
       updateHUD();
       updateButtons();
     }
@@ -1077,37 +1234,31 @@
     }
 
     function checkAchievementProgress() {
-      if ((state.totalBuilds || 0) >= 5) unlockAchievement("builder5");
       if ((state.totalBuilds || 0) >= 10) unlockAchievement("builder10");
-      if ((state.totalBuilds || 0) >= 20) unlockAchievement("builder20");
       if ((state.totalBuilds || 0) >= 35) unlockAchievement("builder35");
       if ((state.totalBuilds || 0) >= 50) unlockAchievement("builder50");
-      if ((state.totalUpgrades || 0) >= 10) unlockAchievement("upgrade10");
       if ((state.totalUpgrades || 0) >= 25) unlockAchievement("upgrade25");
-      if ((state.totalUpgrades || 0) >= 50) unlockAchievement("upgrade50");
       if ((state.totalUpgrades || 0) >= 100) unlockAchievement("upgrade100");
-      if ((state.totalUpgrades || 0) >= 200) unlockAchievement("upgrade200");
-      if ((state.totalMeteors || 0) >= 5) unlockAchievement("meteor5");
       if ((state.totalMeteors || 0) >= 10) unlockAchievement("meteor10");
-      if ((state.totalMeteors || 0) >= 25) unlockAchievement("meteor25");
       if ((state.totalMeteors || 0) >= 50) unlockAchievement("meteor50");
-      if ((state.totalKills || 0) >= 100) unlockAchievement("slayer100");
-      if ((state.totalKills || 0) >= 500) unlockAchievement("slayer500");
       if ((state.totalKills || 0) >= 1000) unlockAchievement("slayer1000");
-      if ((state.totalKills || 0) >= 2500) unlockAchievement("slayer2500");
       if ((state.totalKills || 0) >= 5000) unlockAchievement("slayer5000");
-      if ((state.totalKills || 0) >= 10000) unlockAchievement("slayer10000");
-      if (state.gold >= 1000) unlockAchievement("rich1000");
       if (state.gold >= 5000) unlockAchievement("rich5000");
-      if (state.gold >= 10000) unlockAchievement("rich10000");
       if (state.gold >= 20000) unlockAchievement("rich20000");
-      if (state.gold >= 50000) unlockAchievement("rich50000");
-      if (state.score >= 50000) unlockAchievement("score50000");
       if (state.score >= 100000) unlockAchievement("score100000");
-      if (state.score >= 200000) unlockAchievement("score200000");
       if (state.score >= 500000) unlockAchievement("score500000");
-      if (state.score >= 1000000) unlockAchievement("score1000000");
       if (state.score >= 2000000) unlockAchievement("score2000000");
+      state.mapRecords = state.mapRecords || {};
+      const mapId = state.selectedMap || "orbital";
+      const currentRecord = state.mapRecords[mapId] || { highScore: 0, highestWave: 0 };
+      const nextRecord = {
+        highScore: Math.max(currentRecord.highScore || 0, state.score || 0),
+        highestWave: Math.max(currentRecord.highestWave || 0, state.wave || 0)
+      };
+      if (nextRecord.highScore !== (currentRecord.highScore || 0) || nextRecord.highestWave !== (currentRecord.highestWave || 0)) {
+        state.mapRecords[mapId] = nextRecord;
+        saveMetaProgress();
+      }
       if ((state.highScore || 0) < state.score) {
         state.highScore = state.score;
         state.highScoreWave = state.wave || 0;
@@ -1139,6 +1290,7 @@
         const s = payload && payload.state ? payload.state : null;
         if (!s) return null;
         return {
+          map: MAPS[s.selectedMap]?.name || MAPS.orbital.name,
           wave: Number.isFinite(s.wave) ? s.wave : 0,
           gold: Number.isFinite(s.gold) ? Math.floor(s.gold) : 0,
           hp: Number.isFinite(s.health) ? s.health : 0
@@ -1161,6 +1313,7 @@
           wave: state.wave,
           score: state.score,
           selectedBuild: state.selectedBuild,
+          selectedMap: state.selectedMap,
           statsMode: state.statsMode,
           waveInProgress: state.waveInProgress,
           toSpawn: state.toSpawn,
@@ -1442,6 +1595,7 @@
         selectionLines: [],
         hoverBuild: null
       };
+      setActiveMap(state.selectedMap);
       const towerIndex = Number.isInteger(loaded.selectedTowerIndex) ? loaded.selectedTowerIndex : -1;
       const enemyIndex = Number.isInteger(loaded.selectedEnemyIndex) ? loaded.selectedEnemyIndex : -1;
       state.meteorReadyAt = savedMeteorCooldownMs !== null
@@ -1548,6 +1702,41 @@
 
     function endAchievementsDrag() {
       state.achievementsDragActive = false;
+    }
+
+    function rebuildMapLayout() {
+      buildSpots = [];
+      for (let y = grid; y <= H; y += grid) {
+        for (let x = grid; x <= W - grid; x += grid) {
+          buildSpots.push({ x, y });
+        }
+      }
+      buildSpotSet = new Set(buildSpots.map((spot) => `${spot.x},${spot.y}`));
+      roadSpotSet = new Set(
+        buildSpots
+          .filter((spot) => tooCloseToPath(spot.x, spot.y))
+          .map((spot) => `${spot.x},${spot.y}`)
+      );
+    }
+
+    function setActiveMap(mapId) {
+      const resolvedMapId = MAPS[mapId] ? mapId : "orbital";
+      path = MAPS[resolvedMapId].path.map((point) => ({ ...point }));
+      if (state) state.selectedMap = resolvedMapId;
+      rebuildMapLayout();
+    }
+
+    function getCurrentMapTheme() {
+      const map = MAPS[state?.selectedMap] || MAPS.orbital;
+      return map.theme || MAPS.orbital.theme;
+    }
+
+    function getMapRecord(mapId) {
+      const record = state?.mapRecords?.[mapId];
+      return {
+        highScore: Number.isFinite(record?.highScore) ? Math.max(0, record.highScore) : 0,
+        highestWave: Number.isFinite(record?.highestWave) ? Math.max(0, record.highestWave) : 0
+      };
     }
 
     function openEncyclopedia(tab = "towers", key = null) {
@@ -2151,20 +2340,15 @@
 
     function awardWaveClearBonus(wave) {
       const status = ensureWaveStatus(wave);
-      if (status.rewarded || status.remaining > 0) return false;
+      if (status.rewarded || status.remaining > 0 || state.health <= 0) return false;
       status.rewarded = true;
       state.clearedWave = Math.max(state.clearedWave, wave);
-      if (wave >= 5) unlockAchievement("wave5");
-      if (wave >= 10) unlockAchievement("wave10");
       if (wave >= 25) unlockAchievement("wave25");
       if (wave >= 50) unlockAchievement("wave50");
-      if (wave >= 75) unlockAchievement("wave75");
-      if (wave >= 100) unlockAchievement("wave100");
+      if (wave >= 100) unlockAchievement(`map_${state.selectedMap || "orbital"}`);
       if (wave === 100 && state.health >= 20) unlockAchievement("wave100_flawless");
-      if (wave >= 150) unlockAchievement("wave150");
       if (wave >= 200) unlockAchievement("wave200");
       if (wave >= 300) unlockAchievement("wave300");
-      if (wave >= 400) unlockAchievement("wave400");
       if (wave >= 500) unlockAchievement("wave500");
       state.waveReadyGlow = wave === state.wave;
       if (wave % 100 === 0 && wave !== 100) {
@@ -2798,7 +2982,7 @@
         for (const btn of btns) {
           if (hitRect(x, y, btn) && !btn.disabled) {
             if (btn.id === "gameOverRestart") {
-              resetGame();
+              resetGame(state.selectedMap);
               state.screen = "play";
               state.messageAt = Date.now();
               startLoop();
@@ -2829,7 +3013,7 @@
         for (const btn of btns) {
           if (hitRect(x, y, btn) && !btn.disabled) {
             if (btn.id === "victoryRestart") {
-              resetGame();
+              resetGame(state.selectedMap);
               state.screen = "play";
               state.messageAt = Date.now();
               startLoop();
@@ -2844,6 +3028,21 @@
       }
       if (state.screen === "start") {
         for (const btn of uiState.startButtons) {
+          if (hitRect(x, y, btn) && !btn.disabled) {
+            handleUiAction(btn.id);
+            return;
+          }
+        }
+        for (const btn of uiState.buttons) {
+          if (btn.id === "fullscreen" && hitRect(x, y, btn) && !btn.disabled) {
+            handleUiAction(btn.id);
+            return;
+          }
+        }
+        return;
+      }
+      if (state.screen === "mapSelect") {
+        for (const btn of uiState.mapButtons) {
           if (hitRect(x, y, btn) && !btn.disabled) {
             handleUiAction(btn.id);
             return;
@@ -2975,11 +3174,36 @@
       }
       if (id === "cloudSave") exportCloudSave();
       if (id === "cloudLoad") importCloudSave();
+      if (id.startsWith("map:")) {
+        const mapId = id.slice(4);
+        setActiveMap(mapId);
+        state.message = `${MAPS[state.selectedMap].name} selected.`;
+        state.messageAt = Date.now();
+        return;
+      }
       if (id === "start") {
+        state.screen = "mapSelect";
+        state.mapSelectPreview = state.selectedMap || "orbital";
+        state.message = "Choose a map.";
+        state.messageAt = Date.now();
+        updateButtons();
+        return;
+      }
+      if (id === "mapSelectBack") {
+        state.screen = "start";
+        state.message = "";
+        state.messageAt = Date.now();
+        updateButtons();
+        return;
+      }
+      if (id.startsWith("mapStart:")) {
+        const mapId = id.slice(9);
+        setActiveMap(mapId);
         state.screen = "play";
         state.message = "Set up quickly. First wave starts in 40s.";
         state.messageAt = Date.now();
         updateButtons();
+        return;
       }
       if (id === "fullscreen") toggleFullscreen();
     }
@@ -3056,7 +3280,7 @@
 
     function togglePause() {
       if (state.gameOver) {
-        resetGame();
+        resetGame(state.selectedMap);
         startLoop();
         return;
       }
@@ -3076,7 +3300,7 @@
     }
 
     function restartFromPause() {
-      resetGame();
+      resetGame(state.selectedMap);
       state.screen = "play";
       state.message = "Set up quickly. First wave starts in 40s.";
       state.messageAt = Date.now();
@@ -3298,30 +3522,75 @@
     }
 
     function drawMapDecor() {
+      const theme = getCurrentMapTheme();
       ctx.save();
-      ctx.strokeStyle = "rgba(95, 162, 255, 0.14)";
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.moveTo(64, 260);
-      ctx.bezierCurveTo(180, 220, 230, 250, 320, 205);
-      ctx.moveTo(540, 410);
-      ctx.bezierCurveTo(640, 360, 700, 390, 860, 350);
-      ctx.stroke();
+      ctx.strokeStyle = theme.accentB;
+      ctx.lineWidth = 1.2;
+      if (theme.decor === "nebula") {
+        ctx.beginPath();
+        ctx.moveTo(64, 260);
+        ctx.bezierCurveTo(180, 220, 230, 250, 320, 205);
+        ctx.moveTo(540, 410);
+        ctx.bezierCurveTo(640, 360, 700, 390, 860, 350);
+        ctx.stroke();
+      } else if (theme.decor === "asteroids") {
+        ctx.fillStyle = theme.accentA;
+        for (const rock of [{ x: 106, y: 104, r: 32 }, { x: 220, y: 74, r: 20 }, { x: 820, y: 410, r: 28 }, { x: 714, y: 454, r: 18 }]) {
+          ctx.beginPath();
+          ctx.arc(rock.x, rock.y, rock.r, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      } else if (theme.decor === "aurora") {
+        ctx.fillStyle = theme.accentA;
+        ctx.beginPath();
+        ctx.arc(160, 96, 42, 0, Math.PI * 2);
+        ctx.arc(208, 92, 34, 0, Math.PI * 2);
+        ctx.arc(244, 108, 28, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(720, 420, 34, 0, Math.PI * 2);
+        ctx.arc(764, 410, 28, 0, Math.PI * 2);
+        ctx.arc(796, 426, 22, 0, Math.PI * 2);
+        ctx.fill();
+      } else if (theme.decor === "comet") {
+        ctx.strokeStyle = theme.accentA;
+        ctx.lineWidth = 2.2;
+        for (const streak of [{ x: 96, y: 112 }, { x: 286, y: 78 }, { x: 714, y: 148 }, { x: 814, y: 104 }]) {
+          ctx.beginPath();
+          ctx.moveTo(streak.x, streak.y);
+          ctx.lineTo(streak.x + 78, streak.y + 34);
+          ctx.stroke();
+        }
+      } else if (theme.decor === "pulsar") {
+        ctx.strokeStyle = theme.accentA;
+        ctx.lineWidth = 2;
+        for (let i = 0; i < 4; i++) {
+          const y = 90 + i * 110;
+          ctx.beginPath();
+          ctx.moveTo(70, y);
+          ctx.lineTo(260, y);
+          ctx.lineTo(260, y + 48);
+          ctx.lineTo(520, y + 48);
+          ctx.stroke();
+        }
+      } else if (theme.decor === "lunar") {
+        ctx.fillStyle = theme.accentA;
+        for (const crater of [{ x: 100, y: 110, r: 34 }, { x: 820, y: 140, r: 40 }, { x: 740, y: 420, r: 36 }, { x: 220, y: 420, r: 28 }]) {
+          ctx.beginPath();
+          ctx.arc(crater.x, crater.y, crater.r, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.strokeStyle = theme.accentB;
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(84, 172);
+        ctx.bezierCurveTo(160, 142, 220, 192, 320, 164);
+        ctx.moveTo(604, 244);
+        ctx.bezierCurveTo(700, 214, 780, 250, 892, 216);
+        ctx.stroke();
+      }
       ctx.restore();
     }
-
-    const buildSpots = [];
-    for (let y = grid; y <= H; y += grid) {
-      for (let x = grid; x <= W - grid; x += grid) {
-        buildSpots.push({ x, y });
-      }
-    }
-    const buildSpotSet = new Set(buildSpots.map((s) => `${s.x},${s.y}`));
-    const roadSpotSet = new Set(
-      buildSpots
-        .filter((spot) => tooCloseToPath(spot.x, spot.y))
-        .map((spot) => `${spot.x},${spot.y}`)
-    );
 
     function drawBuildSpots() {
       ctx.save();
@@ -3348,10 +3617,10 @@
       ctx.save();
       ctx.lineCap = "round";
       ctx.lineJoin = "round";
-
+      const theme = getCurrentMapTheme();
       const grad = ctx.createLinearGradient(0, 60, W, 390);
-      grad.addColorStop(0, "rgba(240,163,89,0.95)");
-      grad.addColorStop(1, "rgba(240,99,146,0.9)");
+      grad.addColorStop(0, theme.pathStart);
+      grad.addColorStop(1, theme.pathEnd);
 
       ctx.strokeStyle = "rgba(255, 255, 255, 0.14)";
       ctx.lineWidth = 44;
@@ -3381,17 +3650,18 @@
       const x = W - 6;
       const y = path[path.length - 1].y;
       const postVictoryPalette = state.wave > 100;
+      const theme = getCurrentMapTheme();
       ctx.save();
       ctx.translate(x, y);
-      ctx.fillStyle = postVictoryPalette ? "rgba(24, 62, 44, 0.5)" : "rgba(20, 48, 65, 0.45)";
+      ctx.fillStyle = postVictoryPalette ? "rgba(24, 62, 44, 0.5)" : theme.coreOuter;
       ctx.beginPath();
       ctx.arc(0, 0, 40, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = postVictoryPalette ? "#2f8a63" : "#2f6f8a";
+      ctx.fillStyle = postVictoryPalette ? "#2f8a63" : theme.coreInner;
       ctx.beginPath();
       ctx.arc(0, 0, 23, 0, Math.PI * 2);
       ctx.fill();
-      ctx.strokeStyle = postVictoryPalette ? "#a7f0c8" : "#8fc1d7";
+      ctx.strokeStyle = postVictoryPalette ? "#a7f0c8" : theme.coreStroke;
       ctx.lineWidth = 2;
       ctx.stroke();
       ctx.restore();
@@ -4139,6 +4409,142 @@
       uiState.buttons.push({ x: fsX, y: btnY, w: btnW, h: btnH, id: "fullscreen", disabled: false });
     }
 
+    function drawMapCardPreview(mapId, x, y, w, h) {
+      const map = MAPS[mapId];
+      if (!map) return;
+      const theme = map.theme;
+      const previewX = x + 14;
+      const previewY = y + 32;
+      const previewW = w - 28;
+      const previewH = h - 58;
+      const minX = Math.min(...map.path.map((point) => point.x));
+      const maxX = Math.max(...map.path.map((point) => point.x));
+      const minY = Math.min(...map.path.map((point) => point.y));
+      const maxY = Math.max(...map.path.map((point) => point.y));
+      const spanX = Math.max(1, maxX - minX);
+      const spanY = Math.max(1, maxY - minY);
+      const scale = Math.min(previewW / spanX, previewH / spanY);
+      const offsetX = previewX + (previewW - spanX * scale) / 2 - minX * scale;
+      const offsetY = previewY + (previewH - spanY * scale) / 2 - minY * scale;
+
+      ctx.save();
+      const bg = ctx.createLinearGradient(x, y, x, y + h);
+      bg.addColorStop(0, theme.bgTop);
+      bg.addColorStop(1, theme.bgBottom);
+      ctx.fillStyle = bg;
+      pathRoundedRect(x, y, w, h, 16);
+      ctx.fill();
+      ctx.fillStyle = theme.accentA;
+      ctx.beginPath();
+      ctx.arc(x + 40, y + 34, 16, 0, Math.PI * 2);
+      ctx.fill();
+      const route = ctx.createLinearGradient(previewX, previewY, previewX + previewW, previewY + previewH);
+      route.addColorStop(0, theme.pathStart);
+      route.addColorStop(1, theme.pathEnd);
+      ctx.strokeStyle = route;
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
+      ctx.lineWidth = 8;
+      ctx.beginPath();
+      ctx.moveTo(map.path[0].x * scale + offsetX, map.path[0].y * scale + offsetY);
+      for (let i = 1; i < map.path.length; i++) {
+        ctx.lineTo(map.path[i].x * scale + offsetX, map.path[i].y * scale + offsetY);
+      }
+      ctx.stroke();
+      ctx.strokeStyle = "rgba(255,255,255,0.18)";
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      ctx.fillStyle = "#e8f1ff";
+      ctx.font = "700 14px 'Space Grotesk', sans-serif";
+      ctx.textAlign = "left";
+      ctx.fillText(map.name, x + 18, y + 24);
+      const record = getMapRecord(mapId);
+      ctx.fillStyle = "#b9cae2";
+      ctx.font = "600 10px 'Space Grotesk', sans-serif";
+      ctx.fillText(`Wave ${record.highestWave}`, x + 18, y + h - 12);
+      ctx.textAlign = "right";
+      ctx.fillText(`Score ${record.highScore}`, x + w - 18, y + h - 12);
+      ctx.textAlign = "start";
+      ctx.restore();
+    }
+
+    function drawTowerListIcon(type, x, y, disabled = false) {
+      const t = towerTypes[type];
+      if (!t) return;
+      ctx.save();
+      ctx.translate(x, y);
+      if (disabled) ctx.globalAlpha = 0.9;
+      ctx.fillStyle = "rgba(7, 17, 29, 0.95)";
+      ctx.strokeStyle = t.color;
+      ctx.lineWidth = 1.4;
+      ctx.beginPath();
+      ctx.arc(0, 0, 9, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+      ctx.rotate(-Math.PI / 2);
+      ctx.fillStyle = t.color;
+      if (type === "dart") {
+        ctx.beginPath();
+        ctx.moveTo(-1, -1.5);
+        ctx.lineTo(8, -1.5);
+        ctx.lineTo(11, 0);
+        ctx.lineTo(8, 1.5);
+        ctx.lineTo(-1, 1.5);
+        ctx.closePath();
+        ctx.fill();
+      } else if (type === "scatter") {
+        for (let i = -1; i <= 1; i++) {
+          ctx.save();
+          ctx.rotate(i * 0.22);
+          ctx.fillRect(0, -1, 9, 2);
+          ctx.restore();
+        }
+      } else if (type === "cannon") {
+        ctx.fillRect(-1, -2, 10, 4);
+        ctx.fillRect(7, -1, 4, 2);
+      } else if (type === "frost") {
+        ctx.beginPath();
+        ctx.moveTo(-1, -2);
+        ctx.lineTo(6, -2);
+        ctx.lineTo(10, 0);
+        ctx.lineTo(6, 2);
+        ctx.lineTo(-1, 2);
+        ctx.closePath();
+        ctx.fill();
+      } else if (type === "storm") {
+        ctx.fillRect(-1, -1.6, 8, 3.2);
+        ctx.beginPath();
+        ctx.moveTo(6, -3);
+        ctx.lineTo(11, 0);
+        ctx.lineTo(6, 3);
+        ctx.closePath();
+        ctx.fill();
+      } else if (type === "venom") {
+        ctx.beginPath();
+        ctx.moveTo(-1, -2);
+        ctx.quadraticCurveTo(7, -4, 10, 0);
+        ctx.quadraticCurveTo(7, 4, -1, 2);
+        ctx.closePath();
+        ctx.fill();
+      } else if (type === "ember") {
+        ctx.beginPath();
+        ctx.arc(7, 0, 3.4, 0, Math.PI * 2);
+        ctx.fill();
+      } else if (type === "rail") {
+        ctx.fillRect(-1, -1.4, 10, 2.8);
+        ctx.fillRect(8, -0.7, 3, 1.4);
+      } else if (type === "mortar") {
+        ctx.fillRect(-1, -2.2, 5, 4.4);
+        ctx.fillRect(1, -1.6, 10, 3.2);
+      } else if (type === "ion") {
+        ctx.fillRect(0, -1.6, 4.5, 3.2);
+        ctx.beginPath();
+        ctx.arc(6.2, 0, 2.6, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+    }
+
     function drawAchievementPopup() {
       const text = state.achievementPopupText || "";
       const remaining = (state.achievementPopupUntil || 0) - Date.now();
@@ -4178,6 +4584,7 @@
       uiState.pauseButtons = [];
       uiState.victoryButtons = [];
       uiState.startButtons = [];
+      uiState.mapButtons = [];
       uiState.menuButtons = [];
       const layout = getUiLayout();
 
@@ -4203,7 +4610,7 @@
         ctx.arc(W * 0.79, H * 0.27, 108, 0, Math.PI * 2);
         ctx.fill();
         const panelW = 596;
-        const panelH = 388;
+        const panelH = 430;
         const panelX = W / 2 - panelW / 2;
         const panelY = H / 2 - panelH / 2 + 8;
         const panelGrad = ctx.createLinearGradient(panelX, panelY, panelX, panelY + panelH);
@@ -4218,17 +4625,12 @@
         ctx.fillStyle = "#d9f0ff";
         ctx.font = "700 56px 'Bungee', sans-serif";
         ctx.textAlign = "center";
-        ctx.fillText("TD", W / 2, panelY + 66);
+        ctx.fillText("TD", W / 2, panelY + 116);
         ctx.fillStyle = "#b6c8e3";
         ctx.font = "600 16px 'Space Grotesk', sans-serif";
-        ctx.fillText("Place towers. Stop the enemies. Protect the core.", W / 2, panelY + 98);
-        ctx.fillStyle = "#81f495";
-        ctx.font = "700 14px 'Space Grotesk', sans-serif";
-        ctx.fillText(`Highest Wave ${state.highScoreWave || 0}`, W / 2, panelY + 126);
-        ctx.font = "600 12px 'Space Grotesk', sans-serif";
-        ctx.fillText(`High Score ${state.highScore || 0}`, W / 2, panelY + 144);
-        const startBtn = { x: panelX + 69, y: panelY + 168, w: panelW - 138, h: 54 };
-        drawUiButton(startBtn.x, startBtn.y, startBtn.w, startBtn.h, "Start", "primary", false, false, 17);
+        ctx.fillText("Place towers. Stop the enemies. Protect the core.", W / 2, panelY + 150);
+        const startBtn = { x: panelX + 69, y: panelY + 188, w: panelW - 138, h: 54 };
+        drawUiButton(startBtn.x, startBtn.y, startBtn.w, startBtn.h, "Start", "primary", false, false, 16);
         uiState.startButtons.push({ ...startBtn, id: "start", disabled: false });
         const bw = 222;
         const bh = 42;
@@ -4254,8 +4656,50 @@
         if (info) {
           ctx.fillStyle = "#9cb0cc";
           ctx.font = "600 13px 'Space Grotesk', sans-serif";
-          ctx.fillText(info, W / 2, panelY + panelH - 18);
+          ctx.fillText(info, W / 2, panelY + panelH - 22);
         }
+        ctx.textAlign = "start";
+        ctx.restore();
+        drawTopRightControls(false);
+        return;
+      }
+
+      if (state.screen === "mapSelect") {
+        ctx.save();
+        const bg = ctx.createLinearGradient(0, 0, 0, H);
+        bg.addColorStop(0, "rgba(7, 15, 25, 0.98)");
+        bg.addColorStop(1, "rgba(8, 29, 42, 0.98)");
+        ctx.fillStyle = bg;
+        ctx.fillRect(0, 0, W, H);
+        ctx.fillStyle = "#d9f0ff";
+        ctx.font = "700 42px 'Bungee', sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText("Choose A Map", W / 2, 86);
+        const mapIds = Object.keys(MAPS);
+        const cardW = 262;
+        const cardH = 148;
+        const colGap = 16;
+        const rowGap = 16;
+        const cols = 3;
+        const totalW = cardW * cols + colGap * (cols - 1);
+        const startX = W / 2 - totalW / 2;
+        const startY = 146;
+        mapIds.forEach((mapId, idx) => {
+          const map = MAPS[mapId];
+          const col = idx % cols;
+          const row = Math.floor(idx / cols);
+          const x = startX + col * (cardW + colGap);
+          const y = startY + row * (cardH + rowGap);
+          drawMapCardPreview(mapId, x, y, cardW, cardH);
+          ctx.strokeStyle = "rgba(160, 205, 255, 0.35)";
+          ctx.lineWidth = state.selectedMap === mapId ? 2 : 1.2;
+          pathRoundedRect(x, y, cardW, cardH, 16);
+          ctx.stroke();
+          uiState.mapButtons.push({ x, y, w: cardW, h: cardH, id: `mapStart:${mapId}`, disabled: false });
+        });
+        const backBtn = { x: W / 2 - 90, y: H - 72, w: 180, h: 40 };
+        drawUiButton(backBtn.x, backBtn.y, backBtn.w, backBtn.h, "Back", "primary", false);
+        uiState.mapButtons.push({ ...backBtn, id: "mapSelectBack", disabled: false });
         ctx.textAlign = "start";
         ctx.restore();
         drawTopRightControls(false);
@@ -4279,6 +4723,10 @@
       ctx.fillStyle = "#cbe3ff";
       ctx.fillText(`Wave ${state.wave}`, layout.pad + 150, 20);
       ctx.fillText(`Score ${state.score}`, layout.pad + 220, 20);
+      ctx.textAlign = "center";
+      ctx.fillStyle = "#d8e7fb";
+      ctx.fillText(MAPS[state.selectedMap]?.name || "orbital", W / 2, 20);
+      ctx.textAlign = "start";
 
       const btnW = 30;
       const btnH = 20;
@@ -4334,17 +4782,14 @@
         ctx.rect(layout.buildX, by, layout.buildW, itemH - 6);
         ctx.fill();
         ctx.stroke();
-        ctx.fillStyle = t.color;
-        ctx.beginPath();
-        ctx.arc(layout.buildX + 16, by + 18, 8, 0, Math.PI * 2);
-        ctx.fill();
+        drawTowerListIcon(type, layout.buildX + 16, by + 18, disabled);
         ctx.textBaseline = "top";
         ctx.fillStyle = disabled ? "#8ea0b8" : "#e9f2ff";
         ctx.font = "600 11px 'Space Grotesk', sans-serif";
-        ctx.fillText(`${t.name} ($${t.cost})`, layout.buildX + 30, by + 8);
+        ctx.fillText(`${t.name} ($${t.cost})`, layout.buildX + 32, by + 8);
         ctx.fillStyle = "#a9bfdc";
         ctx.font = "500 9.5px 'Space Grotesk', sans-serif";
-        ctx.fillText(t.desc || "", layout.buildX + 30, by + 20);
+        ctx.fillText(t.desc || "", layout.buildX + 32, by + 20);
         ctx.textBaseline = "alphabetic";
         ctx.restore();
         uiState.buildButtons.push({ x: layout.buildX, y: by, w: layout.buildW, h: itemH - 6, type, disabled });
@@ -4774,7 +5219,7 @@
       ctx.fillStyle = "#8fb0d3";
       ctx.font = "700 12px 'Space Grotesk', sans-serif";
       ctx.textAlign = "left";
-      ctx.fillText(`Unlocked ${unlockedCount}/${ACHIEVEMENTS.length}`, panelX + 20, panelY + 26);
+      ctx.fillText(`Earned ${unlockedCount}/${ACHIEVEMENTS.length}`, panelX + 20, panelY + 26);
       const { listX, listY, listW, listH, colGap, colCount, cardW, rowH, contentH, maxScroll } = getAchievementsScrollMetrics();
       state.achievementsScroll = Math.max(0, Math.min(maxScroll, state.achievementsScroll || 0));
       const scroll = state.achievementsScroll;
@@ -4799,7 +5244,7 @@
           ctx.stroke();
           ctx.fillStyle = unlockedAt ? "#81f495" : "#8b9ab1";
           ctx.font = "700 11px 'Space Grotesk', sans-serif";
-          ctx.fillText(unlockedAt ? "UNLOCKED" : "LOCKED", x + 12, y + 18);
+          ctx.fillText(unlockedAt ? "EARNED" : "LOCKED", x + 12, y + 18);
           ctx.fillStyle = "#e9f2ff";
           ctx.font = "700 12px 'Space Grotesk', sans-serif";
           ctx.fillText(achievement.name, x + 102, y + 18, cardW - 112);
@@ -4870,8 +5315,8 @@
         return;
       }
 
-      const bw = 240;
-      const bh = 38;
+      const bw = 284;
+      const bh = 50;
       const colGap = 16;
       const rowGap = 12;
       const cols = 2;
@@ -4888,29 +5333,33 @@
         const bx = startX + col * (bw + colGap);
         const by = startY + row * (bh + rowGap);
         drawUiButton(bx, by, bw, bh, "", "primary", disabled);
-        const textY = by + bh / 2 + 4;
-        ctx.font = "700 12px 'Space Grotesk', sans-serif";
+        const line1Y = by + 20;
+        const line2Y = by + 36;
+        ctx.font = "700 11px 'Space Grotesk', sans-serif";
         ctx.textAlign = "left";
         const pad = 14;
         let tx = bx + pad;
         ctx.fillStyle = disabled ? "#8b9ab1" : "#cfe3ff";
         const base = `Slot ${i}  •  `;
-        ctx.fillText(base, tx, textY);
+        ctx.fillText(base, tx, line1Y);
         tx += ctx.measureText(base).width;
         if (!preview) {
           ctx.fillStyle = disabled ? "#8b9ab1" : "#9cb0cc";
-          ctx.fillText("Empty", tx, textY);
+          ctx.fillText("Empty", tx, line1Y);
         } else {
+          ctx.fillStyle = disabled ? "#8b9ab1" : "#9cb0cc";
+          ctx.fillText(preview.map, tx, line1Y, bw - pad * 2 - (tx - bx));
+          tx = bx + pad;
           ctx.fillStyle = disabled ? "#8b9ab1" : "#cfe3ff";
           const wave = `W${preview.wave}  •  `;
-          ctx.fillText(wave, tx, textY);
+          ctx.fillText(wave, tx, line2Y);
           tx += ctx.measureText(wave).width;
           ctx.fillStyle = disabled ? "#8b9ab1" : "#ffd85a";
           const gold = `Gold ${preview.gold}  •  `;
-          ctx.fillText(gold, tx, textY);
+          ctx.fillText(gold, tx, line2Y);
           tx += ctx.measureText(gold).width;
           ctx.fillStyle = disabled ? "#8b9ab1" : "#ff6a78";
-          ctx.fillText(`HP ${preview.hp}`, tx, textY);
+          ctx.fillText(`HP ${preview.hp}`, tx, line2Y);
         }
         ctx.textAlign = "center";
         uiState.menuButtons.push({ x: bx, y: by, w: bw, h: bh, id: "slot", slot: i, disabled });
@@ -5104,6 +5553,7 @@
         gameOver: state.gameOver,
         autoStartWave: state.autoStartWave,
         autoUpgradeTower: state.autoUpgradeTower,
+        map: state.selectedMap,
         wave: state.wave,
         gold: Math.floor(state.gold),
         hp: state.health,

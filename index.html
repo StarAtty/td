@@ -758,9 +758,9 @@
     const FINAL_BOSS_WAVE_TYPES = ["swarm", "fast", "basic", "striker", "leech", "armored", "tank", "bulwark", "boss"];
     const ACHIEVEMENTS = [
       { id: "firstBuild", name: "Blueprint Down", desc: "Build your first tower." },
-      { id: "builder10", name: "Rapid Expansion", desc: "Build 10 towers in total." },
-      { id: "builder35", name: "Battle Network", desc: "Build 35 towers in total." },
-      { id: "builder50", name: "Citadel Builder", desc: "Build 50 towers in total." },
+      { id: "builder10", name: "Tower Builder", desc: "Build 10 towers in total." },
+      { id: "builder50", name: "Battle Network", desc: "Build 50 towers in total." },
+      { id: "builder100", name: "Citadel Defense", desc: "Build 100 towers in total." },
       { id: "firstUpgrade", name: "Field Retrofit", desc: "Upgrade a tower for the first time." },
       { id: "upgrade25", name: "Overclocked", desc: "Upgrade towers 25 times in total." },
       { id: "upgrade100", name: "Fully Calibrated", desc: "Upgrade towers 100 times in total." },
@@ -779,16 +779,14 @@
       { id: "meteor50", name: "Extinction Event", desc: "Call Meteor 50 times." },
       { id: "wave25", name: "Deep Run", desc: "Clear wave 25." },
       { id: "wave50", name: "Fortress Mode", desc: "Clear wave 50." },
+      { id: "wave100", name: "Century Hold", desc: "Clear wave 100." },
       { id: "wave100_flawless", name: "Perfect Century", desc: "Clear wave 100 without losing HP." },
+      { id: "wave100_no_meteor", name: "Dry Orbit", desc: "Clear wave 100 without using Meteor." },
+      { id: "wave100_ten_towers", name: "Lean Defense", desc: "Clear wave 100 with no more than 10 towers." },
       { id: "wave300", name: "Deep Orbit", desc: "Clear wave 300." },
       { id: "wave500", name: "Impossible!", desc: "Clear wave 500." },
       { id: "slayer1000", name: "Extermination", desc: "Eliminate 1000 enemies in total." },
       { id: "slayer5000", name: "Annihilation Script", desc: "Eliminate 5000 enemies in total." },
-      { id: "rich5000", name: "War Chest", desc: "Hold 5000 gold at once." },
-      { id: "rich20000", name: "Golden Backbone", desc: "Hold 20000 gold at once." },
-      { id: "score100000", name: "Leaderboard Ghost", desc: "Reach 100000 score." },
-      { id: "score500000", name: "Archive Breaker", desc: "Reach 500000 score." },
-      { id: "score2000000", name: "Mythic Ledger", desc: "Reach 2000000 score." },
       { id: "map_orbital", name: "Orbital Spine Secured", desc: "Clear wave 100 on Orbital Spine." },
       { id: "map_asteroid", name: "Asteroid Pass Secured", desc: "Clear wave 100 on Asteroid Pass." },
       { id: "map_aurora", name: "Aurora Rise Secured", desc: "Clear wave 100 on Aurora Rise." },
@@ -1097,7 +1095,7 @@
         const raw = localStorage.getItem(META_KEY);
         const parsed = raw ? JSON.parse(raw) : {};
         return {
-          achievements: parsed && typeof parsed.achievements === "object" && parsed.achievements ? parsed.achievements : {},
+          achievements: sanitizeAchievementsMap(parsed && typeof parsed.achievements === "object" && parsed.achievements ? parsed.achievements : {}),
           highScore: Number.isFinite(parsed?.highScore) ? Math.max(0, parsed.highScore) : 0,
           highScoreWave: Number.isFinite(parsed?.highScoreWave) ? Math.max(0, parsed.highScoreWave) : 0,
           mapRecords: parsed && typeof parsed.mapRecords === "object" && parsed.mapRecords ? parsed.mapRecords : {}
@@ -1110,7 +1108,7 @@
     function saveMetaProgress() {
       try {
         localStorage.setItem(META_KEY, JSON.stringify({
-          achievements: state.achievements || {},
+          achievements: sanitizeAchievementsMap(state.achievements || {}),
           highScore: state.highScore || 0,
           highScoreWave: state.highScoreWave || 0,
           mapRecords: state.mapRecords || {}
@@ -1122,7 +1120,7 @@
 
     function syncMetaProgress() {
       const meta = loadMetaProgress();
-      state.achievements = { ...(meta.achievements || {}), ...(state.achievements || {}) };
+      state.achievements = sanitizeAchievementsMap({ ...(meta.achievements || {}), ...(state.achievements || {}) });
       const currentHighScore = state.highScore || 0;
       const metaHighScore = meta.highScore || 0;
       if (metaHighScore > currentHighScore) {
@@ -1181,6 +1179,7 @@
         buildGhostX: BASE_W / 2,
         buildGhostY: BASE_H / 2,
         achievementPopupText: "",
+        achievementPopupDesc: "",
         achievementPopupUntil: 0,
         achievementsScroll: 0,
         achievementsDragActive: false,
@@ -1219,6 +1218,20 @@
       return ACHIEVEMENTS.find((achievement) => achievement.id === id) || null;
     }
 
+    function sanitizeAchievementsMap(achievements) {
+      const sanitized = {};
+      if (!achievements || typeof achievements !== "object") return sanitized;
+      for (const achievement of ACHIEVEMENTS) {
+        if (!achievements[achievement.id]) continue;
+        sanitized[achievement.id] = achievements[achievement.id];
+      }
+      return sanitized;
+    }
+
+    function getAchievementUnlockedCount() {
+      return Object.keys(sanitizeAchievementsMap(state.achievements || {})).length;
+    }
+
     function unlockAchievement(id) {
       if (state.achievements?.[id]) return;
       const achievement = getAchievement(id);
@@ -1226,7 +1239,8 @@
       state.achievements = state.achievements || {};
       state.achievements[id] = Date.now();
       state.achievementPopupText = achievement.name;
-      state.achievementPopupUntil = Date.now() + 2600;
+      state.achievementPopupDesc = achievement.desc || "";
+      state.achievementPopupUntil = Date.now() + 3600;
       state.message = `Achievement unlocked: ${achievement.name}`;
       state.messageAt = Date.now();
       syncMetaProgress();
@@ -1235,27 +1249,27 @@
 
     function checkAchievementProgress() {
       if ((state.totalBuilds || 0) >= 10) unlockAchievement("builder10");
-      if ((state.totalBuilds || 0) >= 35) unlockAchievement("builder35");
       if ((state.totalBuilds || 0) >= 50) unlockAchievement("builder50");
+      if ((state.totalBuilds || 0) >= 100) unlockAchievement("builder100");
       if ((state.totalUpgrades || 0) >= 25) unlockAchievement("upgrade25");
       if ((state.totalUpgrades || 0) >= 100) unlockAchievement("upgrade100");
       if ((state.totalMeteors || 0) >= 10) unlockAchievement("meteor10");
       if ((state.totalMeteors || 0) >= 50) unlockAchievement("meteor50");
       if ((state.totalKills || 0) >= 1000) unlockAchievement("slayer1000");
       if ((state.totalKills || 0) >= 5000) unlockAchievement("slayer5000");
-      if (state.gold >= 5000) unlockAchievement("rich5000");
-      if (state.gold >= 20000) unlockAchievement("rich20000");
-      if (state.score >= 100000) unlockAchievement("score100000");
-      if (state.score >= 500000) unlockAchievement("score500000");
-      if (state.score >= 2000000) unlockAchievement("score2000000");
       state.mapRecords = state.mapRecords || {};
       const mapId = state.selectedMap || "orbital";
-      const currentRecord = state.mapRecords[mapId] || { highScore: 0, highestWave: 0 };
+      const currentRecord = state.mapRecords[mapId] || { highScore: 0, highestWave: 0, stars: 0 };
       const nextRecord = {
         highScore: Math.max(currentRecord.highScore || 0, state.score || 0),
-        highestWave: Math.max(currentRecord.highestWave || 0, state.wave || 0)
+        highestWave: Math.max(currentRecord.highestWave || 0, state.wave || 0),
+        stars: Math.max(currentRecord.stars || 0, 0)
       };
-      if (nextRecord.highScore !== (currentRecord.highScore || 0) || nextRecord.highestWave !== (currentRecord.highestWave || 0)) {
+      if (
+        nextRecord.highScore !== (currentRecord.highScore || 0)
+        || nextRecord.highestWave !== (currentRecord.highestWave || 0)
+        || nextRecord.stars !== (currentRecord.stars || 0)
+      ) {
         state.mapRecords[mapId] = nextRecord;
         saveMetaProgress();
       }
@@ -1735,7 +1749,8 @@
       const record = state?.mapRecords?.[mapId];
       return {
         highScore: Number.isFinite(record?.highScore) ? Math.max(0, record.highScore) : 0,
-        highestWave: Number.isFinite(record?.highestWave) ? Math.max(0, record.highestWave) : 0
+        highestWave: Number.isFinite(record?.highestWave) ? Math.max(0, record.highestWave) : 0,
+        stars: Number.isFinite(record?.stars) ? Math.max(0, Math.min(3, record.stars)) : 0
       };
     }
 
@@ -2346,8 +2361,10 @@
       if (wave >= 25) unlockAchievement("wave25");
       if (wave >= 50) unlockAchievement("wave50");
       if (wave >= 100) unlockAchievement(`map_${state.selectedMap || "orbital"}`);
+      if (wave >= 100) unlockAchievement("wave100");
       if (wave === 100 && state.health >= 20) unlockAchievement("wave100_flawless");
-      if (wave >= 200) unlockAchievement("wave200");
+      if (wave === 100 && (state.totalMeteors || 0) === 0) unlockAchievement("wave100_no_meteor");
+      if (wave === 100 && (state.totalBuilds || 0) <= 10) unlockAchievement("wave100_ten_towers");
       if (wave >= 300) unlockAchievement("wave300");
       if (wave >= 500) unlockAchievement("wave500");
       state.waveReadyGlow = wave === state.wave;
@@ -2359,6 +2376,15 @@
       state.score += 24 + wave * 4;
       state.message = `Wave ${wave} cleared. Bonus resources awarded.`;
       if (wave === 100) {
+        const mapId = state.selectedMap || "orbital";
+        state.mapRecords = state.mapRecords || {};
+        const currentRecord = state.mapRecords[mapId] || { highScore: 0, highestWave: 0, stars: 0 };
+        const earnedStars = state.health >= 20 ? 3 : state.health > 10 ? 2 : 1;
+        state.mapRecords[mapId] = {
+          ...currentRecord,
+          stars: Math.max(currentRecord.stars || 0, earnedStars)
+        };
+        saveMetaProgress();
         state.victory = true;
         state.waveReadyGlow = false;
         state.message = "Victory! Core secured.";
@@ -2968,7 +2994,7 @@
         for (const btn of uiState.buttons) {
           if ((btn.id === "pause" || btn.id === "fullscreen") && hitRect(x, y, btn) && !btn.disabled) {
             if (btn.id === "pause") {
-              resetGame();
+              resetGame(state.selectedMap);
               state.screen = "play";
               state.messageAt = Date.now();
               startLoop();
@@ -2990,6 +3016,9 @@
             if (btn.id === "gameOverLoad") {
               openSlotMenu("load");
             }
+            if (btn.id === "gameOverMenu") {
+              returnToStartScreen();
+            }
             return;
           }
         }
@@ -2999,7 +3028,7 @@
         for (const btn of uiState.buttons) {
           if ((btn.id === "pause" || btn.id === "fullscreen") && hitRect(x, y, btn) && !btn.disabled) {
             if (btn.id === "pause") {
-              resetGame();
+              resetGame(state.selectedMap);
               state.screen = "play";
               state.messageAt = Date.now();
               startLoop();
@@ -3020,6 +3049,9 @@
             }
             if (btn.id === "victoryContinue") {
               continueAfterVictory();
+            }
+            if (btn.id === "victoryMenu") {
+              returnToStartScreen();
             }
             return;
           }
@@ -4459,8 +4491,17 @@
       ctx.textAlign = "left";
       ctx.fillText(map.name, x + 18, y + 24);
       const record = getMapRecord(mapId);
+      if (record.stars > 0) {
+        const starText = "★".repeat(record.stars);
+        const starColor = record.stars >= 3 ? "#ffd86e" : record.stars === 2 ? "#d7e0ef" : "#d99a58";
+        ctx.fillStyle = starColor;
+        ctx.font = "700 12px 'Space Grotesk', sans-serif";
+        ctx.textAlign = "right";
+        ctx.fillText(starText, x + w - 18, y + 24);
+      }
       ctx.fillStyle = "#b9cae2";
       ctx.font = "600 10px 'Space Grotesk', sans-serif";
+      ctx.textAlign = "left";
       ctx.fillText(`Wave ${record.highestWave}`, x + 18, y + h - 12);
       ctx.textAlign = "right";
       ctx.fillText(`Score ${record.highScore}`, x + w - 18, y + h - 12);
@@ -4468,12 +4509,13 @@
       ctx.restore();
     }
 
-    function drawTowerListIcon(type, x, y, disabled = false) {
+    function drawTowerListIcon(type, x, y, disabled = false, scale = 1) {
       const t = towerTypes[type];
       if (!t) return;
       ctx.save();
       ctx.translate(x, y);
       if (disabled) ctx.globalAlpha = 0.9;
+      ctx.scale(scale, scale);
       ctx.fillStyle = "rgba(7, 17, 29, 0.95)";
       ctx.strokeStyle = t.color;
       ctx.lineWidth = 1.4;
@@ -4545,15 +4587,125 @@
       ctx.restore();
     }
 
+    function drawEnemyPreviewIcon(enemy, x, y, scale = 1) {
+      if (!enemy) return;
+      const radius = (enemy.r || 12) * scale;
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.fillStyle = enemy.color || "#cfe3ff";
+      if (enemy.kind === "swarm") {
+        drawPoly(0, 0, radius + 1, 3, -Math.PI / 2);
+        ctx.fill();
+      } else if (enemy.kind === "striker") {
+        drawPoly(0, 0, radius + 1, 4, Math.PI / 4);
+        ctx.fill();
+        ctx.fillStyle = "#53331f";
+        ctx.beginPath();
+        ctx.arc(0, 0, radius * 0.3, 0, Math.PI * 2);
+        ctx.fill();
+      } else if (enemy.kind === "fast") {
+        ctx.save();
+        ctx.rotate(Math.PI / 4);
+        ctx.fillRect(-radius * 0.85, -radius * 0.85, radius * 1.7, radius * 1.7);
+        ctx.restore();
+      } else if (enemy.kind === "bulwark") {
+        drawPoly(0, 0, radius + 1, 8, Math.PI / 8);
+        ctx.fill();
+        ctx.strokeStyle = "#d3e0ec";
+        ctx.lineWidth = Math.max(1, 1.5 * scale);
+        ctx.beginPath();
+        ctx.moveTo(-radius * 0.55, 0);
+        ctx.lineTo(radius * 0.55, 0);
+        ctx.moveTo(0, -radius * 0.55);
+        ctx.lineTo(0, radius * 0.55);
+        ctx.stroke();
+      } else if (enemy.kind === "armored") {
+        ctx.fillRect(-radius, -radius, radius * 2, radius * 2);
+        ctx.strokeStyle = "#d6e4ef";
+        ctx.lineWidth = Math.max(1, 1.5 * scale);
+        ctx.strokeRect(-radius + 1.5 * scale, -radius + 1.5 * scale, radius * 2 - 3 * scale, radius * 2 - 3 * scale);
+      } else if (enemy.kind === "leech") {
+        ctx.beginPath();
+        ctx.arc(0, 0, radius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = "#173d3a";
+        ctx.beginPath();
+        ctx.arc(0, 0, radius * 0.46, 0, Math.PI * 2);
+        ctx.fill();
+      } else if (enemy.kind === "boss") {
+        drawPoly(0, 0, radius + 1, 6, Math.PI / 6);
+        ctx.fill();
+      } else if (enemy.kind === "finalBoss") {
+        drawPoly(0, 0, radius + 2.5 * scale, 6, Math.PI / 6);
+        ctx.fill();
+        ctx.fillStyle = "rgba(53, 44, 73, 0.7)";
+        drawPoly(0, 0, radius * 0.76, 6, Math.PI / 6);
+        ctx.fill();
+        ctx.fillStyle = "rgba(216, 196, 255, 0.24)";
+        drawPoly(0, 0, radius * 0.54, 6, Math.PI / 6);
+        ctx.fill();
+        ctx.fillStyle = "#e0ccff";
+        ctx.beginPath();
+        ctx.arc(0, 0, radius * 0.28, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = "#d8c2ff";
+        ctx.lineWidth = Math.max(1, 1.7 * scale);
+        ctx.beginPath();
+        ctx.arc(0, 0, radius * 0.48, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.strokeStyle = "#44355e";
+        ctx.lineWidth = Math.max(1, 2 * scale);
+        ctx.beginPath();
+        ctx.moveTo(-radius * 0.5, -radius * 0.18);
+        ctx.lineTo(radius * 0.5, -radius * 0.18);
+        ctx.moveTo(-radius * 0.5, radius * 0.18);
+        ctx.lineTo(radius * 0.5, radius * 0.18);
+        ctx.stroke();
+      } else {
+        ctx.beginPath();
+        ctx.arc(0, 0, radius, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      ctx.strokeStyle = "rgba(0,0,0,0.4)";
+      ctx.lineWidth = Math.max(1, 1.4 * scale);
+      if (enemy.kind === "armored") {
+        ctx.strokeRect(-radius, -radius, radius * 2, radius * 2);
+      } else if (enemy.kind === "bulwark") {
+        drawPoly(0, 0, radius + 1, 8, Math.PI / 8);
+        ctx.stroke();
+      } else if (enemy.kind === "striker") {
+        drawPoly(0, 0, radius + 1, 4, Math.PI / 4);
+        ctx.stroke();
+      } else if (enemy.kind === "fast") {
+        ctx.save();
+        ctx.rotate(Math.PI / 4);
+        ctx.strokeRect(-radius * 0.85, -radius * 0.85, radius * 1.7, radius * 1.7);
+        ctx.restore();
+      } else if (enemy.kind === "swarm") {
+        drawPoly(0, 0, radius + 1, 3, -Math.PI / 2);
+        ctx.stroke();
+      } else if (enemy.kind === "boss" || enemy.kind === "finalBoss") {
+        drawPoly(0, 0, radius + (enemy.kind === "finalBoss" ? 2.5 * scale : 1), 6, Math.PI / 6);
+        ctx.stroke();
+      } else {
+        ctx.beginPath();
+        ctx.arc(0, 0, radius, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
     function drawAchievementPopup() {
       const text = state.achievementPopupText || "";
+      const desc = state.achievementPopupDesc || "";
       const remaining = (state.achievementPopupUntil || 0) - Date.now();
       if (!text || remaining <= 0) return;
-      const fadeIn = Math.min(1, Math.max(0, 1 - (remaining - 2200) / 250));
+      const fadeIn = Math.min(1, Math.max(0, 1 - (remaining - 3200) / 250));
       const fadeOut = Math.min(1, remaining / 320);
       const alpha = Math.min(fadeIn, fadeOut);
-      const boxW = 300;
-      const boxH = 50;
+      const boxW = 360;
+      const boxH = 68;
       const x = W / 2 - boxW / 2;
       const y = 16;
       ctx.save();
@@ -4573,7 +4725,12 @@
       ctx.fillText("Achievement Unlocked", W / 2, y + 18);
       ctx.fillStyle = "#e9fdf0";
       ctx.font = "700 14px 'Space Grotesk', sans-serif";
-      ctx.fillText(text, W / 2, y + 35);
+      ctx.fillText(text, W / 2, y + 37);
+      if (desc) {
+        ctx.fillStyle = "#bfe7cb";
+        ctx.font = "600 11px 'Space Grotesk', sans-serif";
+        ctx.fillText(desc, W / 2, y + 54);
+      }
       ctx.textAlign = "start";
       ctx.restore();
     }
@@ -4642,7 +4799,7 @@
           { id: "load", label: "Load", kind: "primary", disabled: !hasSavedGame() },
           { id: "cloudLoad", label: "Cloud Load", kind: "primary", disabled: false },
           { id: "encyclopedia", label: "Encyclopedia", kind: "primary", disabled: false },
-          { id: "achievements", label: `Achievements ${Object.keys(state.achievements || {}).length}/${ACHIEVEMENTS.length}`, kind: "primary", disabled: false }
+          { id: "achievements", label: `Achievements ${getAchievementUnlockedCount()}/${ACHIEVEMENTS.length}`, kind: "primary", disabled: false }
         ];
         buttons.forEach((btn, idx) => {
           const col = idx % 2;
@@ -4909,11 +5066,14 @@
       const by = H / 2 + 46;
       drawUiButton(bx, by, bw, bh, "Restart", "warn", false);
       drawUiButton(bx + bw + gap, by, bw, bh, "Load", "primary", !hasSavedGame());
+      const menuY = by + bh + 12;
+      drawUiButton(W / 2 - 110, menuY, 220, bh, "Main Menu", "primary", false);
       ctx.textAlign = "start";
       ctx.restore();
       uiState.gameOverButtons = [
         { x: bx, y: by, w: bw, h: bh, id: "gameOverRestart", disabled: false },
-        { x: bx + bw + gap, y: by, w: bw, h: bh, id: "gameOverLoad", disabled: !hasSavedGame() }
+        { x: bx + bw + gap, y: by, w: bw, h: bh, id: "gameOverLoad", disabled: !hasSavedGame() },
+        { x: W / 2 - 110, y: menuY, w: 220, h: bh, id: "gameOverMenu", disabled: false }
       ];
       drawTopRightControls(true);
     }
@@ -4938,9 +5098,12 @@
       const by = H / 2 + 46;
       drawUiButton(bx, by, bw, bh, "Restart", "warn", false);
       drawUiButton(bx + bw + gap, by, bw, bh, "Continue", "primary", false);
+      const menuY = by + bh + 12;
+      drawUiButton(W / 2 - 110, menuY, 220, bh, "Main Menu", "primary", false);
       uiState.victoryButtons = [
         { x: bx, y: by, w: bw, h: bh, id: "victoryRestart", disabled: false },
-        { x: bx + bw + gap, y: by, w: bw, h: bh, id: "victoryContinue", disabled: false }
+        { x: bx + bw + gap, y: by, w: bw, h: bh, id: "victoryContinue", disabled: false },
+        { x: W / 2 - 110, y: menuY, w: 220, h: bh, id: "victoryMenu", disabled: false }
       ];
       ctx.textAlign = "start";
       ctx.restore();
@@ -4982,7 +5145,7 @@
       drawUiButton(bx + bw + gap, row4, bw, bh, "Cloud Load", "primary", false);
       const row5 = row4 + bh + gap;
       drawUiButton(bx, row5, bw, bh, "Encyclopedia", "primary", false);
-      drawUiButton(bx + bw + gap, row5, bw, bh, `Achievements ${Object.keys(state.achievements || {}).length}/${ACHIEVEMENTS.length}`, "primary", false);
+      drawUiButton(bx + bw + gap, row5, bw, bh, `Achievements ${getAchievementUnlockedCount()}/${ACHIEVEMENTS.length}`, "primary", false);
       const row6 = row5 + bh + gap;
       drawUiButton(bx, row6, totalW, bh, "Main Menu", "primary", false);
       uiState.pauseButtons = [
@@ -5054,6 +5217,9 @@
       const listH = bodyH - 28;
       const detailX = listX + listW + 18;
       const detailW = panelW - (detailX - panelX) - 14;
+      const headerPreviewX = detailX + 30;
+      const headerPreviewY = listY + 42;
+      const headerTextX = detailX + 52;
 
       ctx.fillStyle = "rgba(10, 25, 40, 0.98)";
       ctx.strokeStyle = "rgba(120, 164, 214, 0.42)";
@@ -5092,10 +5258,11 @@
         pathRoundedRect(x, y, itemW, itemH - 6, 10);
         ctx.fill();
         ctx.stroke();
-        ctx.fillStyle = entry.color || "#cfe3ff";
-        ctx.beginPath();
-        ctx.arc(x + 16, y + 16, 7, 0, Math.PI * 2);
-        ctx.fill();
+        if (tab === "towers") {
+          drawTowerListIcon(entry.key, x + 16, y + 15, false, 0.78);
+        } else {
+          drawEnemyPreviewIcon(entry, x + 16, y + 15, entry.key === "finalBoss" ? 0.5 : 0.55);
+        }
         ctx.fillStyle = "#e9f2ff";
         ctx.font = "700 11px 'Space Grotesk', sans-serif";
         ctx.textAlign = "left";
@@ -5103,9 +5270,14 @@
         uiState.menuButtons.push({ x, y, w: itemW, h: itemH - 6, id: "encyclopediaEntry", key: entry.key, disabled: false });
       });
 
+      if (tab === "towers") {
+        drawTowerListIcon(selected.key, headerPreviewX, headerPreviewY, false, 1.15);
+      } else {
+        drawEnemyPreviewIcon(selected, headerPreviewX, headerPreviewY, selected.key === "finalBoss" ? 0.6 : 0.82);
+      }
       ctx.fillStyle = selected.color || "#d9f0ff";
       ctx.font = "700 20px 'Bungee', sans-serif";
-      ctx.fillText(selected.name, detailX + 16, listY + 48);
+      ctx.fillText(selected.name, headerTextX, listY + 49);
       const controlLabel = tab === "towers" ? `Lv ${towerLevel}` : `Wave ${enemyWave}`;
       const controlValue = tab === "towers" ? towerLevel : enemyWave;
       const decId = tab === "towers" ? "encyclopediaTowerLevelDelta" : "encyclopediaEnemyWaveDelta";
@@ -5215,7 +5387,7 @@
       ctx.fill();
       ctx.stroke();
 
-      const unlockedCount = Object.keys(state.achievements || {}).length;
+      const unlockedCount = getAchievementUnlockedCount();
       ctx.fillStyle = "#8fb0d3";
       ctx.font = "700 12px 'Space Grotesk', sans-serif";
       ctx.textAlign = "left";

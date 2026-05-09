@@ -732,14 +732,14 @@
       }
     };
     const enemyCatalog = {
-      basic: { name: "Basic", desc: "Balanced runner with steady health.", tag: "Balanced" },
+      basic: { name: "Basic", desc: "Balanced basic runner.", tag: "Balanced" },
       swarm: { name: "Swarm", desc: "Tiny rush unit that floods lanes quickly.", tag: "Rush" },
       fast: { name: "Fast", desc: "Quick striker that pressures leaks.", tag: "Speed" },
       armored: { name: "Armored", desc: "Frontline cube with heavy armor.", tag: "Armor" },
       striker: { name: "Striker", desc: "Mobile runner with light armor.", tag: "Skirmish" },
-      bulwark: { name: "Bulwark", desc: "Slow plated wall built to absorb fire.", tag: "Wall" },
+      bulwark: { name: "Bulwark", desc: "Slow plated unit that absorbs fire.", tag: "Wall" },
       tank: { name: "Tank", desc: "Large bruiser with durable frame.", tag: "Bruiser" },
-      leech: { name: "Leech", desc: "Corrosive unit that blends sustain with pressure.", tag: "Attrition" },
+      leech: { name: "Leech", desc: "General unit with steady health.", tag: "Attrition" },
       boss: { name: "Boss", desc: "Elite command unit with high armor and core damage.", tag: "Boss" },
       finalBoss: { name: "Final Boss", desc: "Century wave raid boss with extreme durability and core damage.", tag: "Final" }
     };
@@ -777,12 +777,12 @@
       { id: "firstMeteor", name: "From Orbit", desc: "Call Meteor once." },
       { id: "meteor10", name: "Skyfall Doctrine", desc: "Call Meteor 10 times." },
       { id: "meteor50", name: "Extinction Event", desc: "Call Meteor 50 times." },
-      { id: "wave25", name: "Deep Run", desc: "Clear wave 25." },
-      { id: "wave50", name: "Fortress Mode", desc: "Clear wave 50." },
+      { id: "wave25", name: "Outpost Sentinel", desc: "Clear wave 25." },
+      { id: "wave50", name: "Fortress Guardian", desc: "Clear wave 50." },
       { id: "wave100", name: "Century Hold", desc: "Clear wave 100." },
-      { id: "wave100_flawless", name: "Perfect Century", desc: "Clear wave 100 without losing HP." },
-      { id: "wave100_no_meteor", name: "Dry Orbit", desc: "Clear wave 100 without using Meteor." },
-      { id: "wave100_ten_towers", name: "Lean Defense", desc: "Clear wave 100 with no more than 10 towers." },
+      { id: "wave100_flawless", name: "Perfect Defense", desc: "Clear wave 100 without losing HP." },
+      { id: "wave100_no_meteor", name: "All Skills", desc: "Clear wave 100 without using Meteor." },
+      { id: "wave100_ten_towers", name: "Clean Sweep", desc: "Clear wave 100 with no more than 10 towers." },
       { id: "wave300", name: "Deep Orbit", desc: "Clear wave 300." },
       { id: "wave500", name: "Impossible!", desc: "Clear wave 500." },
       { id: "slayer1000", name: "Extermination", desc: "Eliminate 1000 enemies in total." },
@@ -982,7 +982,7 @@
     function compactTowerForCloud(tower) {
       const base = towerTypes[tower.type] || {};
       const out = { type: tower.type, x: tower.x, y: tower.y };
-      const defaults = { cooldown: 0.1, angle: -Math.PI / 2, level: 1, totalInvested: base.cost, shotCount: 0, upgradeFx: 0 };
+      const defaults = { cooldown: 0.01, angle: -Math.PI / 2, level: 1, totalInvested: base.cost, shotCount: 0, upgradeFx: 0 };
       for (const key of CLOUD_TOWER_FIELDS) {
         if (tower[key] == null) continue;
         const defaultValue = defaults[key] ?? base[key];
@@ -995,7 +995,7 @@
     function restoreTowerFromCloud(tower) {
       const base = towerTypes[tower.type] || {};
       return {
-        cooldown: 0.1,
+        cooldown: 0.01,
         angle: -Math.PI / 2,
         level: 1,
         totalInvested: base.cost,
@@ -1186,6 +1186,8 @@
         achievementsDragMoved: false,
         achievementsDragStartY: 0,
         achievementsDragStartScroll: 0,
+        arcBolts: [],
+        encyclopediaDemo: null,
         paused: false,
         pauseStartedAt: 0,
         messageAt: Date.now(),
@@ -1198,8 +1200,13 @@
         mapSelectPreview: "orbital",
         encyclopediaTab: "towers",
         encyclopediaKey: towerOrder[0],
+        encyclopediaTowerKey: towerOrder[0],
+        encyclopediaEnemyKey: "basic",
         encyclopediaTowerLevel: 1,
         encyclopediaEnemyWave: 1,
+        encyclopediaDemoTowerKey: towerOrder[0],
+        encyclopediaDemoEnemyKey: "basic",
+        encyclopediaDemoEnemyWave: 1,
         message: ""
       };
       setActiveMap(state.selectedMap);
@@ -1757,11 +1764,18 @@
     function openEncyclopedia(tab = "towers", key = null) {
       state.menuMode = "encyclopedia";
       state.menuFrom = state.screen;
+      state.encyclopediaTowerKey = state.encyclopediaTowerKey || towerOrder[0];
+      state.encyclopediaEnemyKey = state.encyclopediaEnemyKey || "basic";
       state.encyclopediaTab = tab;
-      state.encyclopediaKey = key || (tab === "enemies" ? "basic" : towerOrder[0]);
+      const fallbackKey = tab === "enemies" ? state.encyclopediaEnemyKey : state.encyclopediaTowerKey;
+      state.encyclopediaKey = key || fallbackKey;
       state.encyclopediaTowerLevel = Math.max(1, Math.min(10, state.encyclopediaTowerLevel || 1));
       const initialEnemyWave = ENEMY_FIRST_WAVE[state.encyclopediaKey] || 1;
       state.encyclopediaEnemyWave = Math.max(1, Math.min(999, tab === "enemies" ? initialEnemyWave : (state.encyclopediaEnemyWave || 1)));
+      state.encyclopediaDemoTowerKey = state.encyclopediaDemoTowerKey || towerOrder[0];
+      state.encyclopediaDemoEnemyKey = state.encyclopediaDemoEnemyKey || "basic";
+      state.encyclopediaDemoEnemyWave = Math.max(1, state.encyclopediaDemoEnemyWave || 1);
+      state.encyclopediaDemo = null;
     }
 
     function getTowerEncyclopediaEntries() {
@@ -1799,7 +1813,7 @@
       if (!base) return null;
       const tower = {
         type,
-        cooldown: 0.1,
+        cooldown: 0.01,
         angle: -Math.PI / 2,
         level: 1,
         totalInvested: base.cost,
@@ -1869,6 +1883,758 @@
       const decimals = row.decimals || 0;
       const text = decimals > 0 ? delta.toFixed(decimals) : `${Math.round(delta)}`;
       return `+${row.prefix || ""}${text}${row.suffix || ""}`;
+    }
+
+    function encyclopediaDemoSpotBlocked(px, py, pathPts) {
+      for (let i = 0; i < pathPts.length - 1; i++) {
+        const a = pathPts[i];
+        const b = pathPts[i + 1];
+        if (pointSegDist(px, py, a.x, a.y, b.x, b.y) < 20) return true;
+      }
+      return false;
+    }
+
+    function createEncyclopediaTowerDemo(tower, enemyPreview, w, h) {
+      const g = grid;
+      const pathGame = [
+        { x: -1.5 * g, y: -g * 2 },
+        { x: 3 * g, y: -g * 2 },
+        { x: 3 * g, y: g },
+        { x: 6 * g, y: g },
+        { x: 6 * g, y: -g },
+        { x: 6 * g, y: -g },
+        { x: 9 * g, y: -g }
+      ];
+      const towerGx = 5 * g;
+      const towerGy = 0;
+      const pad = g * 1.25;
+      const xs = pathGame.map((p) => p.x).concat([towerGx]);
+      const ys = pathGame.map((p) => p.y).concat([towerGy]);
+      let gridMinX = Math.floor((Math.min(...xs) - pad) / g) * g;
+      let gridMaxX = Math.ceil((Math.max(...xs) + pad) / g) * g;
+      let gridMinY = Math.floor((Math.min(...ys) - pad * 2) / g) * g;
+      let gridMaxY = Math.ceil((Math.max(...ys) + pad * 2) / g) * g;
+      return {
+        key: `${tower.type}:${tower.level}:${enemyPreview.kind}:${Math.round(enemyPreview.maxHp || enemyPreview.hp || 0)}:${Math.round(w)}:${Math.round(h)}`,
+        lastAt: performance.now(),
+        spawnTimer: 0.05,
+        enemySeq: 0,
+        enemyPreview: { ...enemyPreview },
+        pathGame,
+        towerGx,
+        towerGy,
+        gridMinX,
+        gridMaxX,
+        gridMinY,
+        gridMaxY,
+        projBounds: {
+          minX: gridMinX - g * 4,
+          maxX: gridMaxX + g * 4,
+          minY: gridMinY - g * 4,
+          maxY: gridMaxY + g * 4
+        },
+        tower: {
+          ...tower,
+          x: towerGx,
+          y: towerGy,
+          cooldown: 0,
+          angle: -Math.PI / 2,
+          shotCount: 0
+        },
+        enemies: [],
+        projectiles: [],
+        particles: [],
+        hazards: [],
+        effects: []
+      };
+    }
+
+    function getEncyclopediaTowerDemo(tower, enemyPreview, w, h) {
+      const key = `${tower.type}:${tower.level}:${enemyPreview.kind}:${Math.round(enemyPreview.maxHp || enemyPreview.hp || 0)}:${Math.round(w)}:${Math.round(h)}`;
+      if (!state.encyclopediaDemo || state.encyclopediaDemo.key !== key) {
+        state.encyclopediaDemo = createEncyclopediaTowerDemo(tower, enemyPreview, w, h);
+      }
+      return state.encyclopediaDemo;
+    }
+
+    function getEncyclopediaDemoSpawnCap(kind) {
+      if (kind === "finalBoss") return 1;
+      if (kind === "boss") return 3;
+      return Infinity;
+    }
+
+    function spawnEncyclopediaDemoEnemy(demo) {
+      demo.enemySeq += 1;
+      const template = demo.enemyPreview;
+      const start = demo.pathGame[0];
+      demo.enemies.push({
+        kind: template.kind,
+        color: template.color,
+        r: template.r || 12,
+        x: start.x,
+        y: start.y,
+        seg: 0,
+        p: 0,
+        hp: template.maxHp || template.hp || 205,
+        maxHp: template.maxHp || template.hp || 205,
+        speed: template.speed || 48,
+        reward: template.reward || 0,
+        armor: template.armor || 0,
+        coreDamage: template.coreDamage || 0,
+        slowFactor: 1,
+        slowTimer: 0,
+        poisonDps: 0,
+        poisonTimer: 0,
+        burningDps: 0,
+        burningTimer: 0,
+        damageAmp: 1,
+        damageAmpTimer: 0,
+        damageAmpColor: "#f58cff"
+      });
+    }
+
+    function damageEncyclopediaDemoEnemy(demo, enemy, amount) {
+      if (!enemy) return;
+      const amp = enemy.damageAmpTimer > 0 ? (enemy.damageAmp || 1) : 1;
+      enemy.hp -= amount * amp;
+      if (enemy.hp <= 0) {
+        const idx = demo.enemies.indexOf(enemy);
+        if (idx >= 0) demo.enemies.splice(idx, 1);
+        burstEncyclopediaDemo(demo, enemy.x, enemy.y, enemy.color, 10, 34);
+      }
+    }
+
+    function burstEncyclopediaDemo(demo, x, y, color, count, spread) {
+      for (let i = 0; i < count; i++) {
+        const a = Math.random() * Math.PI * 2;
+        const s = Math.random() * spread;
+        demo.particles.push({
+          x,
+          y,
+          vx: Math.cos(a) * s,
+          vy: Math.sin(a) * s,
+          r: 2 + Math.random() * 2,
+          life: 0.28 + Math.random() * 0.42,
+          color
+        });
+      }
+    }
+
+    function chainShockEncyclopediaDemo(demo, origin, projectile) {
+      if (!projectile.chainTargets || projectile.chainTargets <= 0) return;
+      let from = origin;
+      let damage = projectile.damage * projectile.chainDamageFalloff;
+      const visited = new Set([origin]);
+      for (let jump = 0; jump < projectile.chainTargets; jump++) {
+        let next = null;
+        let bestDist = Infinity;
+        for (const enemy of demo.enemies) {
+          if (visited.has(enemy)) continue;
+          const d = Math.hypot(enemy.x - from.x, enemy.y - from.y);
+          if (d <= projectile.chainRange && d < bestDist) {
+            bestDist = d;
+            next = enemy;
+          }
+        }
+        if (!next) break;
+        visited.add(next);
+        demo.effects.push({ type: "bolt", fromX: from.x, fromY: from.y, toX: next.x, toY: next.y, color: projectile.color || "#8af7ff", life: 0.14, maxLife: 0.14 });
+        damageEncyclopediaDemoEnemy(demo, next, damage);
+        if (projectile.slow) {
+          next.slowFactor = projectile.slow;
+          next.slowTimer = Math.max(next.slowTimer || 0, projectile.slowTime || 0);
+        }
+        if (projectile.ionMarkAmp > 1) {
+          next.damageAmp = Math.max(next.damageAmp || 1, projectile.ionMarkAmp);
+          next.damageAmpTimer = Math.max(next.damageAmpTimer || 0, projectile.ionMarkTime || 0);
+          next.damageAmpColor = projectile.color || "#f58cff";
+        }
+        from = next;
+        damage *= projectile.chainDamageFalloff;
+      }
+    }
+
+    function getEncyclopediaDemoEnemyProgress(enemy) {
+      return (enemy.seg || 0) * 2000 + (enemy.p || 0);
+    }
+
+    function updateEncyclopediaTowerDemo(tower, demo, dt) {
+      demo.lastAt = performance.now();
+      demo.tower.x = demo.towerGx;
+      demo.tower.y = demo.towerGy;
+      demo.spawnTimer -= dt;
+      if (demo.spawnTimer <= 0) {
+        const spawnCap = getEncyclopediaDemoSpawnCap(demo.enemyPreview.kind);
+        const activeSameKind = demo.enemies.filter((enemy) => enemy.kind === demo.enemyPreview.kind).length;
+        if (activeSameKind < spawnCap) {
+          spawnEncyclopediaDemoEnemy(demo);
+        }
+        demo.spawnTimer = demo.enemyPreview.kind === "finalBoss"
+          ? 1.35
+          : demo.enemyPreview.kind === "boss"
+          ? 0.95
+          : 0.68;
+      }
+
+      for (let i = demo.effects.length - 1; i >= 0; i--) {
+        demo.effects[i].life -= dt;
+        if (demo.effects[i].life <= 0) demo.effects.splice(i, 1);
+      }
+      for (let i = demo.particles.length - 1; i >= 0; i--) {
+        const p = demo.particles[i];
+        p.life -= dt;
+        p.x += (p.vx || 0) * dt;
+        p.y += (p.vy || 0) * dt;
+        p.r *= 0.988;
+        if (p.life <= 0) demo.particles.splice(i, 1);
+      }
+
+      for (let i = demo.hazards.length - 1; i >= 0; i--) {
+        const hazard = demo.hazards[i];
+        hazard.age = (hazard.age || 0) + dt;
+        hazard.life -= dt;
+        if (hazard.life <= 0) {
+          demo.hazards.splice(i, 1);
+          continue;
+        }
+        if (hazard.age >= (hazard.activeDelay || 0)) {
+          for (const enemy of [...demo.enemies]) {
+            if (Math.hypot(enemy.x - hazard.x, enemy.y - hazard.y) <= hazard.radius) {
+              damageEncyclopediaDemoEnemy(demo, enemy, hazard.dps * dt);
+              enemy.burningDps = Math.max(enemy.burningDps || 0, hazard.dps * 0.72);
+              enemy.burningTimer = Math.max(enemy.burningTimer || 0, 0.45);
+            }
+          }
+        }
+      }
+
+      for (let i = demo.enemies.length - 1; i >= 0; i--) {
+        const enemy = demo.enemies[i];
+        if (enemy.poisonTimer > 0) {
+          enemy.poisonTimer -= dt;
+          damageEncyclopediaDemoEnemy(demo, enemy, enemy.poisonDps * dt);
+          if (!demo.enemies.includes(enemy)) continue;
+        }
+        if (enemy.burningTimer > 0) {
+          enemy.burningTimer -= dt;
+          damageEncyclopediaDemoEnemy(demo, enemy, enemy.burningDps * dt);
+          if (!demo.enemies.includes(enemy)) continue;
+        }
+        if (enemy.damageAmpTimer > 0) enemy.damageAmpTimer -= dt;
+        else {
+          enemy.damageAmp = 1;
+          enemy.damageAmpColor = "#f58cff";
+        }
+        if (enemy.slowTimer > 0) enemy.slowTimer -= dt;
+        else enemy.slowFactor = 1;
+        let move = enemy.speed * enemy.slowFactor * dt;
+        while (move > 0 && enemy.seg < demo.pathGame.length - 1) {
+          const a = demo.pathGame[enemy.seg];
+          const b = demo.pathGame[enemy.seg + 1];
+          const segLen = Math.hypot(b.x - a.x, b.y - a.y);
+          const remain = segLen - enemy.p;
+          if (move < remain) {
+            enemy.p += move;
+            move = 0;
+          } else {
+            move -= remain;
+            enemy.seg += 1;
+            enemy.p = 0;
+          }
+        }
+        if (enemy.seg >= demo.pathGame.length - 1) {
+          demo.enemies.splice(i, 1);
+          continue;
+        }
+        const a = demo.pathGame[enemy.seg];
+        const b = demo.pathGame[enemy.seg + 1];
+        const segLen = Math.hypot(b.x - a.x, b.y - a.y);
+        const t = segLen ? enemy.p / segLen : 0;
+        enemy.x = a.x + (b.x - a.x) * t;
+        enemy.y = a.y + (b.y - a.y) * t;
+      }
+
+      const rangePx = tower.range;
+      let target = null;
+      let bestThreat = -1;
+      for (const enemy of demo.enemies) {
+        const dist = Math.hypot(enemy.x - demo.tower.x, enemy.y - demo.tower.y);
+        if (dist > rangePx) continue;
+        const progress = getEncyclopediaDemoEnemyProgress(enemy);
+        if (progress > bestThreat) {
+          bestThreat = progress;
+          target = enemy;
+        }
+      }
+
+      demo.tower.cooldown -= dt;
+      if (target && demo.tower.cooldown <= 0) {
+        demo.tower.angle = Math.atan2(target.y - demo.tower.y, target.x - demo.tower.x);
+        demo.tower.cooldown = tower.fireRate;
+        const pellets = tower.pellets || 1;
+        const spread = tower.spread || 0;
+        const shotCount = (demo.tower.shotCount || 0) + 1;
+        const isBurstShot = tower.burstCycle && shotCount % tower.burstCycle === 0;
+        const isBurningShot = tower.burningCycle && shotCount % tower.burningCycle === 0;
+        if (tower.type === "storm") {
+          const strike = {
+            damage: tower.damage,
+            slow: tower.slow || 0,
+            slowTime: tower.slowTime || 0,
+            chainTargets: tower.chainTargets || 0,
+            chainRange: Math.max(18, (tower.chainRange || 0)),
+            chainDamageFalloff: tower.chainDamageFalloff || 1,
+            color: tower.color
+          };
+          demo.effects.push({ type: "bolt", fromX: demo.tower.x, fromY: demo.tower.y, toX: target.x, toY: target.y, color: tower.color, life: 0.14, maxLife: 0.14 });
+          damageEncyclopediaDemoEnemy(demo, target, tower.damage);
+          if (demo.enemies.includes(target) && strike.slow) {
+            target.slowFactor = strike.slow;
+            target.slowTimer = Math.max(target.slowTimer || 0, strike.slowTime || 0);
+          }
+          if (strike.chainTargets > 0) {
+            chainShockEncyclopediaDemo(demo, target, strike);
+          }
+          demo.tower.shotCount = shotCount;
+          return;
+        }
+        for (let p = 0; p < pellets; p++) {
+          const offset = pellets > 1 ? ((p / (pellets - 1)) * 2 - 1) * spread : 0;
+          const angle = demo.tower.angle + offset;
+          let speedScale = 0.2;
+          const speed = tower.projectileSpeed * speedScale;
+          let vx = Math.cos(angle) * speed;
+          let vy = Math.sin(angle) * speed;
+          demo.projectiles.push({
+            type: tower.type,
+            x: demo.tower.x,
+            y: demo.tower.y,
+            vx,
+            vy,
+            life: tower.type === "mortar" ? 1.9 : 1.5,
+            damage: tower.damage,
+            splash: tower.splash || 0,
+            slow: tower.slow || 0,
+            slowTime: tower.slowTime || 0,
+            poisonDps: tower.poisonDps || 0,
+            poisonTime: tower.poisonTime || 0,
+            burningDps: isBurningShot ? (tower.burningDps || 0) : 0,
+            burningTime: isBurningShot ? (tower.burningTime || 0) : 0,
+            burningRadius: isBurningShot ? (tower.burningRadius || 0) : 0,
+            armorShred: tower.armorShred || 0,
+            chainTargets: tower.chainTargets || 0,
+            chainRange: tower.chainRange * 0.4,
+            chainDamageFalloff: tower.chainDamageFalloff || 1,
+            ionMarkAmp: tower.ionMarkAmp || 1,
+            ionMarkTime: tower.ionMarkTime || 0,
+            pierceLeft: isBurstShot ? (tower.burstPierce || 0) : 0,
+            color: tower.color,
+            hitRadius: getProjectileHitRadius({ type: tower.type, splash: tower.splash || 0 })
+          });
+        }
+        demo.tower.shotCount = shotCount;
+      }
+
+      for (let i = demo.projectiles.length - 1; i >= 0; i--) {
+        const projectile = demo.projectiles[i];
+        projectile.life -= dt;
+        projectile.x += projectile.vx * dt * 2.5;
+        projectile.y += projectile.vy * dt * 2.5;
+        const B = demo.projBounds;
+        if (
+          projectile.life <= 0 ||
+          projectile.x > B.maxX + grid ||
+          projectile.x < B.minX - grid * 2 ||
+          projectile.y < B.minY - grid ||
+          projectile.y > B.maxY + grid
+        ) {
+          demo.projectiles.splice(i, 1);
+          continue;
+        }
+        let removeProjectile = false;
+        for (const enemy of [...demo.enemies]) {
+          const dist = Math.hypot(enemy.x - projectile.x, enemy.y - projectile.y);
+          if (dist > enemy.r * 0.7 + projectile.hitRadius) continue;
+          if (projectile.splash > 0) {
+            const splashRadius = projectile.splash * 1;
+            burstEncyclopediaDemo(demo, projectile.x, projectile.y, projectile.color, 18, splashRadius);
+            if (splashRadius >= 40) {
+              burstEncyclopediaDemo(demo, projectile.x, projectile.y, "#ffd18a", 10, splashRadius);
+            }
+            if (projectile.type === "mortar") {
+              burstEncyclopediaDemo(demo, projectile.x, projectile.y, "rgba(255, 234, 190, 0.95)", 22, splashRadius);
+              burstEncyclopediaDemo(demo, projectile.x, projectile.y, "rgba(116, 104, 88, 0.75)", 16, splashRadius * 0.7);
+            }
+            for (const splashEnemy of [...demo.enemies]) {
+              if (Math.hypot(splashEnemy.x - projectile.x, splashEnemy.y - projectile.y) <= splashRadius) {
+                damageEncyclopediaDemoEnemy(demo, splashEnemy, projectile.damage);
+              }
+            }
+          } else {
+            if (projectile.type === "storm") {
+              demo.effects.push({ type: "bolt", fromX: projectile.x, fromY: projectile.y, toX: enemy.x, toY: enemy.y, color: projectile.color, life: 0.14, maxLife: 0.14 });
+            }
+            damageEncyclopediaDemoEnemy(demo, enemy, projectile.damage);
+            if (projectile.burningDps) {
+              demo.hazards.push({
+                x: enemy.x,
+                y: enemy.y,
+                radius: projectile.burningRadius,
+                dps: projectile.burningDps,
+                life: projectile.burningTime,
+                maxLife: projectile.burningTime,
+                age: 0,
+                activeDelay: 0.08,
+                color: "rgba(255, 120, 72, 0.35)"
+              });
+            }
+            if (demo.enemies.includes(enemy)) {
+              if (projectile.slow) {
+                enemy.slowFactor = projectile.slow;
+                enemy.slowTimer = Math.max(enemy.slowTimer || 0, projectile.slowTime || 0);
+              }
+              if (projectile.poisonDps) {
+                enemy.poisonDps = Math.max(enemy.poisonDps || 0, projectile.poisonDps);
+                enemy.poisonTimer = Math.max(enemy.poisonTimer || 0, projectile.poisonTime || 0);
+              }
+              if (projectile.ionMarkAmp > 1) {
+                enemy.damageAmp = Math.max(enemy.damageAmp || 1, projectile.ionMarkAmp);
+                enemy.damageAmpTimer = Math.max(enemy.damageAmpTimer || 0, projectile.ionMarkTime || 0);
+                enemy.damageAmpColor = projectile.color || "#f58cff";
+              }
+            }
+            if (projectile.chainTargets > 0) {
+              chainShockEncyclopediaDemo(demo, enemy, projectile);
+            }
+          }
+          if (projectile.pierceLeft > 0) {
+            projectile.pierceLeft -= 1;
+            projectile.x += projectile.vx * 0.01;
+            projectile.y += projectile.vy * 0.01;
+          } else {
+            removeProjectile = true;
+          }
+          break;
+        }
+        if (removeProjectile) demo.projectiles.splice(i, 1);
+      }
+    }
+
+    function drawEncyclopediaTowerDemo(tower, enemyPreview, x, y, w, h) {
+      if (!tower || !enemyPreview) return;
+      const demo = getEncyclopediaTowerDemo(tower, enemyPreview, w, h);
+      const now = performance.now();
+      const dt = Math.max(0.033, (now - demo.lastAt) / 1000);
+      updateEncyclopediaTowerDemo(tower, demo, dt);
+
+      ctx.save();
+      pathRoundedRect(x, y, w, h, 16);
+      ctx.fillStyle = "rgba(9, 21, 35, 0.76)";
+      ctx.fill();
+      ctx.strokeStyle = "rgba(130, 173, 223, 0.26)";
+      ctx.lineWidth = 1.1;
+      ctx.stroke();
+
+      // Keep all demo visuals contained within the demo panel.
+      ctx.save();
+      pathRoundedRect(x, y, w, h, 16);
+      ctx.clip();
+
+      const cw = demo.gridMaxX - demo.gridMinX;
+      const ch = demo.gridMaxY - demo.gridMinY;
+      const demoScale = Math.min(w / cw, h / ch) * 1.5;
+      const invS = 1;
+      const originX = (demo.gridMinX + demo.gridMaxX) / 2;
+      const originY = (demo.gridMinY + demo.gridMaxY) / 2;
+      ctx.translate(x + w / 2, y + h / 2);
+      ctx.scale(demoScale, demoScale);
+      ctx.translate(-originX, -originY);
+
+      ctx.strokeStyle = "rgba(165, 201, 255, 0.07)";
+      ctx.lineWidth = invS;
+      for (let gx = demo.gridMinX; gx <= demo.gridMaxX; gx += grid) {
+        ctx.beginPath();
+        ctx.moveTo(gx, demo.gridMinY);
+        ctx.lineTo(gx, demo.gridMaxY);
+        ctx.stroke();
+      }
+      for (let gy = demo.gridMinY; gy <= demo.gridMaxY; gy += grid) {
+        ctx.beginPath();
+        ctx.moveTo(demo.gridMinX, gy);
+        ctx.lineTo(demo.gridMaxX, gy);
+        ctx.stroke();
+      }
+
+      for (let gx = demo.gridMinX; gx <= demo.gridMaxX; gx += grid) {
+        for (let gy = demo.gridMinY; gy <= demo.gridMaxY; gy += grid) {
+          const blocked = encyclopediaDemoSpotBlocked(gx, gy, demo.pathGame);
+          const occupied = gx === demo.towerGx && gy === demo.towerGy;
+          if (blocked) {
+            ctx.fillStyle = "rgba(255, 99, 146, 0.18)";
+            ctx.strokeStyle = "rgba(255, 145, 176, 0.4)";
+          } else {
+            ctx.fillStyle = occupied ? "rgba(100, 190, 255, 0.06)" : "rgba(77, 255, 226, 0.11)";
+            ctx.strokeStyle = occupied ? "rgba(141, 183, 244, 0.2)" : "rgba(77, 255, 226, 0.35)";
+          }
+          ctx.lineWidth = 1.2 * invS;
+          ctx.beginPath();
+          ctx.rect(gx - PAD_HALF, gy - PAD_HALF, PAD_HALF * 2, PAD_HALF * 2);
+          ctx.fill();
+          ctx.stroke();
+        }
+      }
+
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.14)";
+      ctx.lineWidth = 44 * invS;
+      ctx.beginPath();
+      ctx.moveTo(demo.pathGame[0].x, demo.pathGame[0].y);
+      for (let i = 1; i < demo.pathGame.length; i++) ctx.lineTo(demo.pathGame[i].x, demo.pathGame[i].y);
+      ctx.stroke();
+
+      const miniGrad = ctx.createLinearGradient(demo.gridMinX, demo.gridMinY, demo.gridMaxX, demo.gridMaxY);
+      miniGrad.addColorStop(0, "rgba(240, 163, 89, 0.88)");
+      miniGrad.addColorStop(1, "rgba(240, 99, 146, 0.82)");
+      ctx.strokeStyle = miniGrad;
+      ctx.lineWidth = 28 * invS;
+      ctx.beginPath();
+      ctx.moveTo(demo.pathGame[0].x, demo.pathGame[0].y);
+      for (let i = 1; i < demo.pathGame.length; i++) ctx.lineTo(demo.pathGame[i].x, demo.pathGame[i].y);
+      ctx.stroke();
+
+      ctx.strokeStyle = "rgba(255,255,255,0.3)";
+      ctx.setLineDash([10 * invS, 18 * invS]);
+      ctx.lineWidth = 2 * invS;
+      ctx.beginPath();
+      ctx.moveTo(demo.pathGame[0].x, demo.pathGame[0].y);
+      for (let i = 1; i < demo.pathGame.length; i++) ctx.lineTo(demo.pathGame[i].x, demo.pathGame[i].y);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      const rangePx = tower.range;
+      ctx.strokeStyle = `${tower.color}55`;
+      ctx.lineWidth = 1.1 * invS;
+      ctx.beginPath();
+      ctx.arc(demo.tower.x, demo.tower.y, rangePx, 0, Math.PI * 2);
+      ctx.stroke();
+      const towerIconScale = PAD_HALF / 12;
+      const nextShot = (demo.tower.shotCount || 0) + 1;
+      const emberReady = tower.burningCycle && nextShot % tower.burningCycle === 0;
+      const burstReady = tower.burstCycle && nextShot % tower.burstCycle === 0;
+      const specialReady = emberReady || burstReady;
+      for (const hazard of demo.hazards) {
+        ctx.save();
+        if ((hazard.age || 0) >= (hazard.activeDelay || 0)) {
+          const activeAge = (hazard.age || 0) - (hazard.activeDelay || 0);
+          const boost = Math.exp(-activeAge * 3.2);
+          const lifeRatio = hazard.maxLife ? Math.max(0, hazard.life / hazard.maxLife) : 1;
+          const alpha = Math.min(0.5, Math.max(0.05, lifeRatio * 0.28 + boost * 0.22));
+          const g = ctx.createRadialGradient(hazard.x, hazard.y, 6, hazard.x, hazard.y, hazard.radius);
+          g.addColorStop(0, `rgba(255, 204, 150, ${alpha})`);
+          g.addColorStop(1, `rgba(255, 93, 72, ${alpha})`);
+          ctx.fillStyle = g;
+          ctx.beginPath();
+          ctx.arc(hazard.x, hazard.y, hazard.radius, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        if ((hazard.age || 0) < (hazard.activeDelay || 0)) {
+          const p = (hazard.age || 0) / (hazard.activeDelay || 0.08);
+          ctx.strokeStyle = `rgba(255, 210, 150, ${1 - p})`;
+          ctx.lineWidth = 1.5 * invS;
+          ctx.beginPath();
+          ctx.arc(hazard.x, hazard.y, hazard.radius * (0.35 + p * 0.65), 0, Math.PI * 2);
+          ctx.stroke();
+        }
+        ctx.restore();
+      }
+      if (specialReady) {
+        ctx.save();
+        ctx.globalAlpha = 0.22;
+        ctx.fillStyle = tower.color;
+        ctx.beginPath();
+        ctx.arc(demo.tower.x, demo.tower.y, 18.5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+      if ((tower.type === "ember" && emberReady) || (tower.type === "rail" && burstReady)) {
+        const pulse = 0.5 + Math.sin(performance.now() * 0.01 + demo.tower.x * 0.03) * 0.5;
+        ctx.save();
+        ctx.globalAlpha = 0.14 + pulse * 0.2;
+        ctx.fillStyle = tower.color;
+        ctx.beginPath();
+        ctx.arc(demo.tower.x, demo.tower.y, 22, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+      drawTowerListIcon(tower.type, demo.tower.x, demo.tower.y, false, towerIconScale, demo.tower.angle);
+      for (const enemy of demo.enemies) {
+        drawEnemyPreviewIcon(enemy, enemy.x, enemy.y, 1);
+        const hpW = 18;
+        ctx.fillStyle = "rgba(8, 18, 28, 0.78)";
+        ctx.fillRect(enemy.x - hpW / 2, enemy.y - 15, hpW, 3.5);
+        ctx.fillStyle = "#75e9a7";
+        ctx.fillRect(enemy.x - hpW / 2, enemy.y - 15, hpW * Math.max(0, enemy.hp / enemy.maxHp), 3.5);
+        if (enemy.slowTimer > 0) {
+          ctx.strokeStyle = "rgba(170, 201, 255, 0.8)";
+          ctx.lineWidth = 1.1 * invS;
+          ctx.beginPath();
+          ctx.arc(enemy.x, enemy.y, enemy.r * 0.8 + 3, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+        if (enemy.poisonTimer > 0) {
+          ctx.strokeStyle = "rgba(128, 255, 173, 0.85)";
+          ctx.lineWidth = invS;
+          ctx.setLineDash([2 * invS, 3 * invS]);
+          ctx.beginPath();
+          ctx.arc(enemy.x, enemy.y, enemy.r * 0.8 + 5, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.setLineDash([]);
+        }
+        if (enemy.burningTimer > 0) {
+          const f = 0.22 + Math.random() * 0.16;
+          ctx.fillStyle = `rgba(255, 131, 72, ${f})`;
+          ctx.beginPath();
+          ctx.arc(enemy.x, enemy.y, enemy.r * 0.8 + 2, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        if (enemy.damageAmpTimer > 0) {
+          ctx.strokeStyle = enemy.damageAmpColor || "#9fffe3";
+          ctx.lineWidth = 1.1 * invS;
+          ctx.beginPath();
+          ctx.moveTo(enemy.x, enemy.y - enemy.r * 0.8 - 7);
+          ctx.lineTo(enemy.x + 4, enemy.y - enemy.r * 0.8 - 2);
+          ctx.lineTo(enemy.x - 4, enemy.y - enemy.r * 0.8 - 2);
+          ctx.closePath();
+          ctx.stroke();
+        }
+      }
+      for (const projectile of demo.projectiles) {
+        const projectileAngle = Math.atan2(projectile.vy, projectile.vx);
+        const trailScale = projectile.type === "rail" ? 0.12 : 0.02;
+        const tailX = projectile.x - projectile.vx * trailScale;
+        const tailY = projectile.y - projectile.vy * trailScale;
+        if (projectile.type !== "scatter" && projectile.type !== "ember") {
+          ctx.strokeStyle = `${projectile.color}aa`;
+          ctx.lineWidth = (projectile.splash ? 1.5 : 1.1) * invS;
+          ctx.beginPath();
+          ctx.moveTo(tailX, tailY);
+          ctx.lineTo(projectile.x, projectile.y);
+          ctx.stroke();
+        }
+        ctx.save();
+        ctx.translate(projectile.x, projectile.y);
+        ctx.rotate(projectileAngle);
+        ctx.fillStyle = projectile.color;
+        if (projectile.type === "rail") {
+          ctx.fillRect(-5, -1.3, 10, 2.6);
+          ctx.fillStyle = "rgba(255, 230, 230, 0.8)";
+          ctx.fillRect(2.8, -0.8, 3.4, 1.6);
+        } else if (projectile.type === "scatter") {
+          ctx.beginPath();
+          ctx.arc(0, 0, 1.9, 0, Math.PI * 2);
+          ctx.fill();
+        } else if (projectile.type === "storm") {
+          ctx.beginPath();
+          ctx.moveTo(5, -4);
+          ctx.lineTo(0, -1);
+          ctx.lineTo(3, 0);
+          ctx.lineTo(-5, 4);
+          ctx.lineTo(-1, 1);
+          ctx.lineTo(-3, 0);
+          ctx.closePath();
+          ctx.fill();
+        } else if (projectile.type === "dart") {
+          ctx.beginPath();
+          ctx.moveTo(5.2, 0);
+          ctx.lineTo(-2.6, -1.8);
+          ctx.lineTo(-1.1, 0);
+          ctx.lineTo(-2.6, 1.8);
+          ctx.closePath();
+          ctx.fill();
+        } else if (projectile.type === "frost") {
+          ctx.strokeStyle = "rgba(220, 236, 255, 0.85)";
+          ctx.lineWidth = invS;
+          ctx.beginPath();
+          ctx.moveTo(5.2, 0);
+          ctx.lineTo(1.2, -2.4);
+          ctx.lineTo(-1.8, -1.4);
+          ctx.lineTo(-4.2, 0);
+          ctx.lineTo(-1.8, 1.4);
+          ctx.lineTo(1.2, 2.4);
+          ctx.closePath();
+          ctx.fill();
+          ctx.stroke();
+        } else if (projectile.type === "venom") {
+          ctx.beginPath();
+          ctx.arc(0, 0, 3.3, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = "rgba(206, 255, 214, 0.75)";
+          ctx.beginPath();
+          ctx.arc(0.8, -0.8, 1.3, 0, Math.PI * 2);
+          ctx.fill();
+        } else if (projectile.type === "ion") {
+          ctx.strokeStyle = `${projectile.color}cc`;
+          ctx.lineWidth = 1.1 * invS;
+          ctx.beginPath();
+          ctx.arc(0, 0, 3.4, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.arc(0, 0, 1.4, 0, Math.PI * 2);
+          ctx.fill();
+        } else if (projectile.type === "ember") {
+          ctx.beginPath();
+          ctx.arc(0, 0, 4.2, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = "rgba(255, 207, 139, 0.65)";
+          ctx.beginPath();
+          ctx.arc(-0.9, -0.9, 2.1, 0, Math.PI * 2);
+          ctx.fill();
+        } else if (projectile.type === "mortar" || projectile.splash > 0) {
+          ctx.beginPath();
+          ctx.arc(0, 0, 4.5, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = "rgba(255, 241, 205, 0.6)";
+          ctx.beginPath();
+          ctx.arc(-1.1, -1.1, 1.7, 0, Math.PI * 2);
+          ctx.fill();
+        } else {
+          ctx.beginPath();
+          ctx.arc(0, 0, Math.max(2.2, projectile.hitRadius), 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.restore();
+      }
+      for (const effect of demo.effects) {
+        const alpha = Math.max(0, effect.life / (effect.type === "mark" ? 0.3 : effect.type === "burst" ? 0.26 : 0.18));
+        if (effect.type === "ring" || effect.type === "mark" || effect.type === "burst") {
+          ctx.strokeStyle = colorToRgba(effect.color, alpha);
+          ctx.lineWidth = (effect.type === "burst" ? 2.4 : 1.8) * invS;
+          ctx.beginPath();
+          ctx.arc(effect.x, effect.y, effect.radius * (1 + (1 - alpha) * 0.28), 0, Math.PI * 2);
+          ctx.stroke();
+        } else if (effect.type === "bolt") {
+          ctx.strokeStyle = colorToRgba(effect.color, alpha);
+          ctx.lineWidth = 2 * invS;
+          ctx.beginPath();
+          ctx.moveTo(effect.fromX, effect.fromY);
+          ctx.lineTo((effect.fromX + effect.toX) / 2 + (Math.random() - 0.5) * 8, (effect.fromY + effect.toY) / 2 + (Math.random() - 0.5) * 8);
+          ctx.lineTo(effect.toX, effect.toY);
+          ctx.stroke();
+        }
+      }
+      for (const p of demo.particles) {
+        ctx.save();
+        ctx.globalAlpha = Math.max(0, p.life * 1.5);
+        ctx.fillStyle = p.color;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+      ctx.restore();
+      ctx.textAlign = "start";
+      ctx.restore();
     }
 
     function drawWrappedText(text, x, y, maxWidth, lineHeight, maxLines = Infinity) {
@@ -2172,7 +2938,7 @@
         burningTimer: 0,
         damageAmp: 1,
         damageAmpTimer: 0,
-        damageAmpColor: "#f58cff"
+        damageAmpColor: "#9fffe3"
       };
       if (kind === "swarm") {
         const maxHp = Math.round(75 * hpScale);
@@ -2420,7 +3186,7 @@
           e.damageAmpTimer -= dt;
         } else {
           e.damageAmp = 1;
-          e.damageAmpColor = "#f58cff";
+          e.damageAmpColor = "#9fffe3";
         }
 
         let move = e.speed * e.slowFactor * dt;
@@ -2488,6 +3254,31 @@
 
         const angle = Math.atan2(target.y - tower.y, target.x - tower.x);
         tower.angle = angle;
+        if (tower.type === "storm") {
+          const strike = {
+            damage: tower.damage,
+            slow: tower.slow || 0,
+            slowTime: tower.slowTime || 0,
+            chainTargets: tower.chainTargets || 0,
+            chainRange: tower.chainRange || 0,
+            chainDamageFalloff: tower.chainDamageFalloff || 1,
+            ionMarkAmp: tower.ionMarkAmp || 1,
+            ionMarkTime: tower.ionMarkTime || 0,
+            onlyLightningFx: true,
+            color: tower.color
+          };
+          spawnArcBolt(state.arcBolts || (state.arcBolts = []), tower.x, tower.y, target.x, target.y, tower.color || "#8af7ff");
+          hitEnemy(target, tower.damage, true);
+          if (state.enemies.includes(target) && strike.slow) {
+            target.slowFactor = strike.slow;
+            target.slowTimer = Math.max(target.slowTimer || 0, strike.slowTime || 0);
+          }
+          if (strike.chainTargets > 0) {
+            chainShock(target, strike);
+          }
+          tower.shotCount = (tower.shotCount || 0) + 1;
+          continue;
+        }
 
         const pellets = tower.pellets || 1;
         const spread = tower.spread || 0;
@@ -2495,7 +3286,7 @@
           const isBurstShot = tower.burstCycle && ((tower.shotCount || 0) + 1) % tower.burstCycle === 0;
           const isBurningShot = tower.burningCycle && ((tower.shotCount || 0) + 1) % tower.burningCycle === 0;
           const baseOffset = pellets > 1 ? ((p / (pellets - 1)) * 2 - 1) * spread : 0;
-          const shotAngle = angle + baseOffset + (Math.random() - 0.5) * 0.03;
+          const shotAngle = angle + baseOffset;
           state.projectiles.push({
             x: tower.x,
             y: tower.y,
@@ -2571,10 +3362,15 @@
       state.hazards.push({ x, y, radius, dps, life: time, maxLife: time, color, age: 0, activeDelay: 0.08 });
     }
 
+    function spawnArcBolt(store, fromX, fromY, toX, toY, color) {
+      store.push({ fromX, fromY, toX, toY, color, life: 0.14, maxLife: 0.14 });
+    }
+
     function chainShock(origin, projectile) {
       if (!projectile.chainTargets || projectile.chainTargets <= 0) return;
       let from = origin;
       let damage = projectile.damage * projectile.chainDamageFalloff;
+      const lightningOnly = projectile.onlyLightningFx === true;
       const visited = new Set([origin]);
       for (let jump = 0; jump < projectile.chainTargets; jump++) {
         let next = null;
@@ -2589,7 +3385,8 @@
         }
         if (!next) break;
         visited.add(next);
-        hitEnemy(next, damage);
+        spawnArcBolt(state.arcBolts || (state.arcBolts = []), from.x, from.y, next.x, next.y, projectile.color || "#8af7ff");
+        hitEnemy(next, damage, lightningOnly);
         if (projectile.slow) {
           next.slowFactor = projectile.slow;
           next.slowTimer = Math.max(next.slowTimer, projectile.slowTime);
@@ -2597,11 +3394,18 @@
         if (projectile.ionMarkAmp > 1) {
           next.damageAmp = Math.max(next.damageAmp || 1, projectile.ionMarkAmp);
           next.damageAmpTimer = Math.max(next.damageAmpTimer || 0, projectile.ionMarkTime);
-          next.damageAmpColor = projectile.color || "#f58cff";
+          next.damageAmpColor = projectile.color || "#9fffe3";
         }
-        burst(next.x, next.y, "#8af7ff", 5, 20);
+        if (!lightningOnly) burst(next.x, next.y, "#8af7ff", 5, 20);
         from = next;
         damage *= projectile.chainDamageFalloff;
+      }
+    }
+
+    function updateArcBolts(dt) {
+      for (let i = (state.arcBolts || []).length - 1; i >= 0; i--) {
+        state.arcBolts[i].life -= dt;
+        if (state.arcBolts[i].life <= 0) state.arcBolts.splice(i, 1);
       }
     }
 
@@ -2643,7 +3447,14 @@
           if (Math.hypot(enemy.x - p.x, enemy.y - p.y) <= getEnemyHitRadius(enemy) + getProjectileHitRadius(p)) {
             if (p.splash > 0) {
               explode(p.x, p.y, p.splash, p.damage, p.color, p.slow, p.slowTime);
+              if (p.type === "mortar") {
+                burst(p.x, p.y, "rgba(255, 234, 190, 0.95)", 22, Math.max(26, p.splash));
+                burst(p.x, p.y, "rgba(116, 104, 88, 0.75)", 16, Math.max(18, p.splash * 0.72));
+              }
             } else {
+              if (p.type === "storm") {
+                spawnArcBolt(state.arcBolts || (state.arcBolts = []), p.x, p.y, enemy.x, enemy.y, p.color || "#8af7ff");
+              }
               const isPierceShot = p.pierceLeft > 0;
               hitEnemy(enemy, p.damage, false, isPierceShot);
               if (p.slow) {
@@ -2661,14 +3472,14 @@
               }
               if (p.burningDps) {
                 const r = p.burningRadius || 0;
-                spawnHazard(enemy.x, enemy.y, r, p.burningDps, p.burningTime, "rgba(255,120,72,0.35)");
+                spawnHazard(enemy.x, enemy.y, r, p.burningDps, p.burningTime, "rgba(255, 120, 72, 0.35)");
                 burst(enemy.x, enemy.y, "#ff9c5f", 10, 22);
               }
               if (p.ionMarkAmp > 1) {
                 enemy.damageAmp = Math.max(enemy.damageAmp || 1, p.ionMarkAmp);
                 enemy.damageAmpTimer = Math.max(enemy.damageAmpTimer || 0, p.ionMarkTime);
-                enemy.damageAmpColor = p.color || "#f58cff";
-                burst(enemy.x, enemy.y, "#f58cff", 4, 12);
+                enemy.damageAmpColor = "#9fffe3";
+                burst(enemy.x, enemy.y, "#9fffe3", 4, 12);
               }
               if (p.chainTargets > 0) {
                 chainShock(enemy, p);
@@ -2804,7 +3615,7 @@
         type,
         x,
         y,
-        cooldown: 0.1,
+        cooldown: 0.01,
         angle: -Math.PI / 2,
         level: 1,
         totalInvested: t.cost,
@@ -2925,13 +3736,22 @@
             }
             if (btn.id === "encyclopediaEntry") {
               state.encyclopediaKey = btn.key;
-              if (state.encyclopediaTab === "enemies") {
-                state.encyclopediaEnemyWave = ENEMY_FIRST_WAVE[btn.key] || 1;
+              if (state.encyclopediaTab === "towers") {
+                state.encyclopediaTowerKey = btn.key;
+                state.encyclopediaDemoTowerKey = btn.key;
               }
+              if (state.encyclopediaTab === "enemies") {
+                state.encyclopediaEnemyKey = btn.key;
+                state.encyclopediaEnemyWave = ENEMY_FIRST_WAVE[btn.key] || 1;
+                state.encyclopediaDemoEnemyKey = btn.key;
+                state.encyclopediaDemoEnemyWave = state.encyclopediaEnemyWave;
+              }
+              state.encyclopediaDemo = null;
               return;
             }
             if (btn.id === "encyclopediaTowerLevelDelta") {
               state.encyclopediaTowerLevel = Math.max(1, Math.min(10, (state.encyclopediaTowerLevel || 1) + btn.delta));
+              state.encyclopediaDemo = null;
               return;
             }
             if (btn.id === "encyclopediaEnemyWaveDelta") {
@@ -2950,6 +3770,8 @@
                 nextIndex = index + 1;
               }
               state.encyclopediaEnemyWave = waves[nextIndex];
+              state.encyclopediaDemoEnemyWave = state.encyclopediaEnemyWave;
+              state.encyclopediaDemo = null;
               return;
             }
             if (btn.id === "menuBack") {
@@ -3776,7 +4598,7 @@
         }
         if (t.type === "storm") {
           ctx.strokeStyle = "rgba(125, 217, 255, 0.48)";
-          ctx.lineWidth = 1.5;
+          ctx.lineWidth = 1.6;
           ctx.beginPath();
           ctx.arc(0, 0, 20, 0, Math.PI * 2);
           ctx.stroke();
@@ -4153,7 +4975,7 @@
           ctx.fill();
         }
         if (e.damageAmpTimer > 0) {
-          ctx.strokeStyle = e.damageAmpColor || "#f58cff";
+          ctx.strokeStyle = e.damageAmpColor || "#9fffe3";
           ctx.lineWidth = 1.4;
           ctx.beginPath();
           ctx.moveTo(0, -e.r - 8);
@@ -4266,6 +5088,21 @@
           ctx.arc(0, 0, p.splash ? 5.5 : 3.8, 0, Math.PI * 2);
           ctx.fill();
         }
+        ctx.restore();
+      }
+    }
+
+    function drawArcBolts() {
+      for (const bolt of state.arcBolts || []) {
+        const alpha = Math.max(0, bolt.life / (bolt.maxLife || 0.14));
+        ctx.save();
+        ctx.strokeStyle = colorToRgba(bolt.color || "#8af7ff", alpha);
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(bolt.fromX, bolt.fromY);
+        ctx.lineTo((bolt.fromX + bolt.toX) / 2 + (Math.random() - 0.5) * 8, (bolt.fromY + bolt.toY) / 2 + (Math.random() - 0.5) * 8);
+        ctx.lineTo(bolt.toX, bolt.toY);
+        ctx.stroke();
         ctx.restore();
       }
     }
@@ -4509,7 +5346,7 @@
       ctx.restore();
     }
 
-    function drawTowerListIcon(type, x, y, disabled = false, scale = 1) {
+    function drawTowerListIcon(type, x, y, disabled = false, scale = 1, angle = -Math.PI / 2) {
       const t = towerTypes[type];
       if (!t) return;
       ctx.save();
@@ -4523,7 +5360,7 @@
       ctx.arc(0, 0, 9, 0, Math.PI * 2);
       ctx.fill();
       ctx.stroke();
-      ctx.rotate(-Math.PI / 2);
+      ctx.rotate(angle);
       ctx.fillStyle = t.color;
       if (type === "dart") {
         ctx.beginPath();
@@ -5177,6 +6014,13 @@
         : Math.max(1, Math.min(999, state.encyclopediaEnemyWave || 1));
       const towerPreview = tab === "towers" ? getTowerPreviewAtLevel(selected.key, towerLevel) : null;
       const nextTowerPreview = tab === "towers" && towerLevel < 10 ? getTowerPreviewAtLevel(selected.key, towerLevel + 1) : null;
+      const demoTowerKey = state.encyclopediaDemoTowerKey || towerOrder[0];
+      const demoEnemyKey = state.encyclopediaDemoEnemyKey || "basic";
+      const demoEnemyWave = demoEnemyKey === "finalBoss"
+        ? Math.max(100, state.encyclopediaDemoEnemyWave || ENEMY_FIRST_WAVE[demoEnemyKey] || 100)
+        : Math.max(1, state.encyclopediaDemoEnemyWave || ENEMY_FIRST_WAVE[demoEnemyKey] || 1);
+      const demoTowerPreview = getTowerPreviewAtLevel(demoTowerKey, towerLevel);
+      const demoEnemyPreview = newEnemy(demoEnemyKey, demoEnemyWave);
 
       uiState.menuButtons = [];
       ctx.save();
@@ -5199,8 +6043,8 @@
       const rightTabX = leftTabX + tabW + 10;
       drawUiButton(leftTabX, tabY, tabW, tabH, "Towers", tab === "towers" ? "primary" : "base", false);
       drawUiButton(rightTabX, tabY, tabW, tabH, "Enemies", tab === "enemies" ? "primary" : "base", false);
-      uiState.menuButtons.push({ x: leftTabX, y: tabY, w: tabW, h: tabH, id: "encyclopediaTab", tab: "towers", key: towerOrder[0], disabled: false });
-      uiState.menuButtons.push({ x: rightTabX, y: tabY, w: tabW, h: tabH, id: "encyclopediaTab", tab: "enemies", key: "basic", disabled: false });
+      uiState.menuButtons.push({ x: leftTabX, y: tabY, w: tabW, h: tabH, id: "encyclopediaTab", tab: "towers", key: state.encyclopediaTowerKey || towerOrder[0], disabled: false });
+      uiState.menuButtons.push({ x: rightTabX, y: tabY, w: tabW, h: tabH, id: "encyclopediaTab", tab: "enemies", key: state.encyclopediaEnemyKey || "basic", disabled: false });
 
       const bodyY = panelY + tabH + 14;
       const bodyH = panelH - tabH - 14;
@@ -5236,7 +6080,7 @@
       ctx.fillStyle = "#8fb0d3";
       ctx.font = "700 11px 'Space Grotesk', sans-serif";
       ctx.textAlign = "left";
-      ctx.fillText(tab === "towers" ? "Archives" : "Archives", listX + 14, listY + 18);
+      ctx.fillText(tab === "towers" ? "Towers" : "Enemies", listX + 14, listY + 18);
       ctx.fillText("Information", detailX + 16, listY + 18);
 
       const itemH = 36;
@@ -5318,10 +6162,28 @@
       ctx.fillStyle = "#b9cae2";
       ctx.font = "600 12px 'Space Grotesk', sans-serif";
       const descLines = drawWrappedText(selected.desc || "", detailX + 16, listY + 78, detailW - 34, 17, 3);
-      const statsBoxY = listY + 84 + descLines * 17;
-      const statsBoxH = listH - (statsBoxY - listY) - 38;
-      ctx.fillStyle = "rgba(255,255,255,0.035)";
-      pathRoundedRect(detailX + 14, statsBoxY, detailW - 28, statsBoxH, 14);
+      const contentTopY = listY + 88 + descLines * 17;
+      const contentH = listH - (contentTopY - listY) - 38;
+      let statsBoxX = detailX + 14;
+      let statsBoxY = contentTopY;
+      let statsBoxW = detailW - 28;
+      let statsBoxH = contentH;
+
+      const splitGap = 12;
+      const statsBoxBaseW = Math.min(224, Math.max(188, Math.floor((detailW - 40) * 0.44)));
+      const demoBoxX = detailX + 14 + statsBoxBaseW + splitGap;
+      const demoBoxW = detailW - 28 - statsBoxBaseW - splitGap;
+      const demoBoxY = contentTopY;
+      const demoBoxH = contentH;
+      statsBoxW = statsBoxBaseW;
+      const sandboxTower = tab === "towers" ? towerPreview : demoTowerPreview;
+      const sandboxEnemy = tab === "towers" ? demoEnemyPreview : selected;
+      if (sandboxTower && sandboxEnemy) {
+        drawEncyclopediaTowerDemo(sandboxTower, sandboxEnemy, demoBoxX, demoBoxY, demoBoxW, demoBoxH);
+      }
+      
+      ctx.fillStyle = "rgba(255, 255, 255, 0.035)";
+      pathRoundedRect(statsBoxX, statsBoxY, statsBoxW, statsBoxH, 14);
       ctx.fill();
       ctx.strokeStyle = "rgba(130, 173, 223, 0.26)";
       ctx.stroke();
@@ -5336,10 +6198,10 @@
           ].filter(Boolean);
       ctx.fillStyle = "#8fb0d3";
       ctx.font = "700 14px 'Space Grotesk', sans-serif";
-      ctx.fillText(tab === "towers" ? "Tower Stats" : "Enemy Stats", detailX + 30, statsBoxY + 26);
+      ctx.fillText(tab === "towers" ? "Tower Stats" : "Enemy Stats", statsBoxX + 16, statsBoxY + 26);
       let detailY = statsBoxY + 50;
-      const statTextX = detailX + 30;
-      const statDeltaX = detailX + Math.min(detailW - 72, 140);
+      const statTextX = statsBoxX + 16;
+      const statDeltaX = statsBoxX + Math.min(statsBoxW - 64, 128);
       ctx.font = "600 12px 'Space Grotesk', sans-serif";
       for (const row of detailRows) {
         const baseText = row.text || `${row.label} ${formatEncyclopediaRowValue(row, row.value)}`;
@@ -5348,7 +6210,7 @@
         if (!row.text) {
           const deltaText = formatEncyclopediaRowDelta(row);
           if (deltaText) {
-            ctx.fillStyle = row.label === "Total Cost" ? "#ffb765" : "#81f495";
+            ctx.fillStyle = row.label === "Total Cost" ? "#ffdb5a" : "#81f495";
             ctx.fillText(deltaText, statDeltaX, detailY);
           }
         }
@@ -5639,10 +6501,13 @@
           if (t.upgradeFx > 0) t.upgradeFx = Math.max(0, t.upgradeFx - dt);
         }
         updateProjectiles(dt);
+        updateArcBolts(dt);
         updateMeteorEffects(dt);
         updateParticles(dt);
         updateHazards(dt);
         tryAutoUpgradeSelectedTower();
+      } else {
+        updateArcBolts(dt);
       }
 
       if (state.waveInProgress && state.toSpawn <= 0) {
@@ -5704,6 +6569,7 @@
       drawTowers();
       drawEnemies();
       drawProjectiles();
+      drawArcBolts();
       drawHazards();
       drawMeteorEffects();
       drawParticles();

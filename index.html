@@ -386,7 +386,10 @@
     let scaleY = 1;
     let dpr = window.devicePixelRatio || 1;
     let menuMusicAudio = null;
+    let menuMusicWavAudio = null;
     let menuMusicActive = false;
+    let menuMusicWavReady = false;
+    let menuMusicGamePreloadStarted = false;
     const GAME_MUSIC_LOOP_START = 10.4347826087;
     const GAME_MUSIC_VOLUME = 1.0;
     let gameMusicCtx = null;
@@ -535,13 +538,25 @@
       return state && (state.screen === "start" || state.screen === "mapSelect");
     }
 
+    function beginGameMusicPreloadAfterTdLoaded() {
+      if (menuMusicGamePreloadStarted) return;
+      menuMusicGamePreloadStarted = true;
+      loadGameMusicBuffer().catch(() => {});
+    }
+
     function ensureMenuMusicAudio() {
-      if (menuMusicAudio) return menuMusicAudio;
-      menuMusicAudio = new Audio("TD.wav");
-      menuMusicAudio.loop = true;
-      menuMusicAudio.preload = "auto";
-      menuMusicAudio.volume = 1.0;
-      menuMusicAudio.load();
+      if (!menuMusicWavAudio) {
+        menuMusicWavAudio = new Audio("TD.wav");
+        menuMusicWavAudio.loop = true;
+        menuMusicWavAudio.preload = "auto";
+        menuMusicWavAudio.volume = 1.0;
+        menuMusicWavAudio.addEventListener("canplaythrough", () => {
+          menuMusicWavReady = true;
+          beginGameMusicPreloadAfterTdLoaded();
+        }, { once: true });
+        menuMusicWavAudio.load();
+      }
+      if (!menuMusicAudio) menuMusicAudio = menuMusicWavAudio;
       return menuMusicAudio;
     }
 
@@ -586,7 +601,6 @@
 
     window.addEventListener("load", () => {
       ensureMenuMusicAudio();
-      loadGameMusicBuffer().catch(() => {});
       syncMenuMusic();
     });
 

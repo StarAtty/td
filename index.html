@@ -7,6 +7,10 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Bungee&family=Space+Grotesk:wght@400;600;700&display=swap" rel="stylesheet" />
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+  <link rel="manifest" href="/site.webmanifest">
   <style>
     :root {
       --bg: #08111d;
@@ -381,6 +385,122 @@
     let scaleX = 1;
     let scaleY = 1;
     let dpr = window.devicePixelRatio || 1;
+    let menuMusicAudio = null;
+    let menuMusicActive = false;
+    const GAME_MUSIC_LOOP_START = 10.4347826087;
+    const GAME_MUSIC_VOLUME = 1.0;
+    let gameMusicCtx = null;
+    let gameMusicGain = null;
+    let gameMusicBuffer = null;
+    let gameMusicBufferPromise = null;
+    let gameMusicSources = [];
+    let gameMusicActive = false;
+    let gameMusicStartPromise = null;
+
+    async function ensureGameMusicContext() {
+      if (!gameMusicCtx) {
+        const Ctx = window.AudioContext || window.webkitAudioContext;
+        gameMusicCtx = new Ctx();
+        gameMusicGain = gameMusicCtx.createGain();
+        gameMusicGain.gain.value = GAME_MUSIC_VOLUME;
+        gameMusicGain.connect(gameMusicCtx.destination);
+      }
+      if (gameMusicCtx.state === "suspended") {
+        await gameMusicCtx.resume();
+      }
+      return gameMusicCtx;
+    }
+
+    function loadGameMusicBuffer() {
+      if (gameMusicBuffer) return Promise.resolve(gameMusicBuffer);
+      if (gameMusicBufferPromise) return gameMusicBufferPromise;
+      gameMusicBufferPromise = (async () => {
+        const ctx = await ensureGameMusicContext();
+        const res = await fetch("Game.wav");
+        if (!res.ok) throw new Error("Game.wav fetch failed");
+        const data = await res.arrayBuffer();
+        gameMusicBuffer = await ctx.decodeAudioData(data);
+        return gameMusicBuffer;
+      })().catch((err) => {
+        gameMusicBufferPromise = null;
+        throw err;
+      });
+      return gameMusicBufferPromise;
+    }
+
+    function stopGameMusicSources() {
+      for (const source of gameMusicSources) {
+        source.onended = null;
+        try {
+          source.stop();
+        } catch (_) {}
+        try {
+          source.disconnect();
+        } catch (_) {}
+      }
+      gameMusicSources = [];
+    }
+
+    function scheduleGameMusicPlayback() {
+      const ctx = gameMusicCtx;
+      const buffer = gameMusicBuffer;
+      stopGameMusicSources();
+
+      const intro = ctx.createBufferSource();
+      intro.buffer = buffer;
+      intro.connect(gameMusicGain);
+
+      const loop = ctx.createBufferSource();
+      loop.buffer = buffer;
+      loop.loop = true;
+      loop.loopStart = GAME_MUSIC_LOOP_START;
+      loop.loopEnd = buffer.duration;
+      loop.connect(gameMusicGain);
+
+      const startAt = ctx.currentTime;
+      const introEnd = startAt + buffer.duration;
+      intro.start(startAt, 0);
+      loop.start(introEnd, GAME_MUSIC_LOOP_START);
+
+      gameMusicSources = [intro, loop];
+    }
+
+    async function startGameMusic() {
+      if (gameMusicActive && gameMusicSources.length) return;
+      if (gameMusicStartPromise) {
+        await gameMusicStartPromise;
+        if (gameMusicActive && gameMusicSources.length) return;
+      }
+      gameMusicStartPromise = (async () => {
+        if (!shouldPlayGameMusic()) return;
+        await ensureGameMusicContext();
+        await loadGameMusicBuffer();
+        if (!shouldPlayGameMusic()) return;
+        gameMusicGain.gain.value = GAME_MUSIC_VOLUME;
+        scheduleGameMusicPlayback();
+        gameMusicActive = true;
+      })();
+      try {
+        await gameMusicStartPromise;
+      } catch (_) {
+        gameMusicActive = false;
+      } finally {
+        gameMusicStartPromise = null;
+      }
+    }
+
+    function stopGameMusic() {
+      stopGameMusicSources();
+      gameMusicActive = false;
+    }
+
+    function syncGameMusic() {
+      if (!shouldPlayGameMusic()) {
+        stopGameMusic();
+        return;
+      }
+      startGameMusic();
+    }
 
     function resizeCanvas() {
       const wrap = canvas.parentElement;
@@ -410,6 +530,66 @@
     window.addEventListener("resize", resizeCanvas);
     document.addEventListener("fullscreenchange", resizeCanvas);
     resizeCanvas();
+
+    function shouldPlayMenuMusic() {
+      return state && (state.screen === "start" || state.screen === "mapSelect");
+    }
+
+    function ensureMenuMusicAudio() {
+      if (menuMusicAudio) return menuMusicAudio;
+      menuMusicAudio = new Audio("TD.wav");
+      menuMusicAudio.loop = true;
+      menuMusicAudio.preload = "auto";
+      menuMusicAudio.volume = 1.0;
+      menuMusicAudio.load();
+      return menuMusicAudio;
+    }
+
+    function startMenuMusic() {
+      const audio = ensureMenuMusicAudio();
+      if (!audio) return;
+      if (menuMusicActive && !audio.paused) return;
+      audio.volume = 1.0;
+      const playPromise = audio.play();
+      if (playPromise && typeof playPromise.catch === "function") {
+        playPromise.catch(() => {
+          menuMusicActive = false;
+        });
+      }
+      menuMusicActive = true;
+    }
+
+    function stopMenuMusic() {
+      if (!menuMusicAudio || !menuMusicActive) return;
+      menuMusicAudio.pause();
+      menuMusicAudio.currentTime = 0;
+      menuMusicActive = false;
+    }
+
+    function shouldPlayGameMusic() {
+      return state && state.screen === "play";
+    }
+
+    function syncMenuMusic() {
+      if (!shouldPlayMenuMusic()) {
+        stopMenuMusic();
+      } else {
+        startMenuMusic();
+      }
+      syncGameMusic();
+    }
+
+    function tryActivateMenuMusic() {
+      if (shouldPlayMenuMusic()) syncMenuMusic();
+      else if (shouldPlayGameMusic()) syncGameMusic();
+    }
+
+    window.addEventListener("load", () => {
+      ensureMenuMusicAudio();
+      loadGameMusicBuffer().catch(() => {});
+      syncMenuMusic();
+    });
+
     const grid = 48;
     const PAD_HALF = 22;
     const METEOR_CD_MS = 120000;
@@ -737,11 +917,11 @@
       fast: { name: "Fast", desc: "Quick striker that pressures leaks.", tag: "Speed" },
       armored: { name: "Armored", desc: "Frontline cube with heavy armor.", tag: "Armor" },
       striker: { name: "Striker", desc: "Mobile runner with light armor.", tag: "Skirmish" },
-      bulwark: { name: "Bulwark", desc: "Slow plated unit that absorbs fire.", tag: "Wall" },
+      bulwark: { name: "Bulwark", desc: "Slow plated unit that absorbs heavy fire.", tag: "Wall" },
       tank: { name: "Tank", desc: "Large bruiser with durable frame.", tag: "Bruiser" },
       leech: { name: "Leech", desc: "General unit with steady health.", tag: "Attrition" },
-      boss: { name: "Boss", desc: "Elite command unit with high armor and core damage.", tag: "Boss" },
-      finalBoss: { name: "Final Boss", desc: "Century wave raid boss with extreme durability and core damage.", tag: "Final" }
+      boss: { name: "Boss", desc: "Elite unit with high armor and core damage.", tag: "Boss" },
+      finalBoss: { name: "Final Boss", desc: "Huge raid boss with extreme durability and core damage.", tag: "Final" }
     };
     const ENEMY_FIRST_WAVE = {
       basic: 1,
@@ -1186,6 +1366,8 @@
         achievementsDragMoved: false,
         achievementsDragStartY: 0,
         achievementsDragStartScroll: 0,
+        achievementsScrollbarDragActive: false,
+        achievementsScrollbarGrabOffset: 0,
         arcBolts: [],
         encyclopediaDemo: null,
         paused: false,
@@ -1212,6 +1394,7 @@
       setActiveMap(state.selectedMap);
       updateHUD();
       updateButtons();
+      syncMenuMusic();
     }
 
     function getMeteorCooldownMs() {
@@ -1635,6 +1818,7 @@
       updateHUD();
       updateButtons();
       updateSelectionStats();
+      syncMenuMusic();
       return true;
     }
 
@@ -1680,6 +1864,8 @@
       state.achievementsScroll = 0;
       state.achievementsDragActive = false;
       state.achievementsDragMoved = false;
+      state.achievementsScrollbarDragActive = false;
+      state.achievementsScrollbarGrabOffset = 0;
     }
 
     function getAchievementsScrollMetrics() {
@@ -1706,11 +1892,42 @@
       return x >= metrics.listX && x <= metrics.listX + metrics.listW && y >= metrics.listY && y <= metrics.listY + metrics.listH;
     }
 
+    function getAchievementsScrollbarMetrics() {
+      const metrics = getAchievementsScrollMetrics();
+      if (metrics.maxScroll <= 0) return null;
+      const scroll = Math.max(0, Math.min(metrics.maxScroll, state.achievementsScroll || 0));
+      const trackX = metrics.panelX + metrics.panelW - 10;
+      const trackY = metrics.listY;
+      const trackW = 4;
+      const trackH = metrics.listH;
+      const thumbH = Math.max(32, metrics.listH * (metrics.listH / metrics.contentH));
+      const thumbY = trackY + (trackH - thumbH) * (scroll / metrics.maxScroll);
+      return { trackX, trackY, trackW, trackH, thumbH, thumbY, maxScroll: metrics.maxScroll };
+    }
+
+    function isPointInAchievementsScrollbarThumb(x, y) {
+      const scrollbar = getAchievementsScrollbarMetrics();
+      if (!scrollbar) return false;
+      const pad = 6;
+      return x >= scrollbar.trackX - pad
+        && x <= scrollbar.trackX + scrollbar.trackW + pad
+        && y >= scrollbar.thumbY - pad
+        && y <= scrollbar.thumbY + scrollbar.thumbH + pad;
+    }
+
     function beginAchievementsDrag(y) {
       state.achievementsDragActive = true;
       state.achievementsDragMoved = false;
       state.achievementsDragStartY = y;
       state.achievementsDragStartScroll = state.achievementsScroll || 0;
+    }
+
+    function beginAchievementsScrollbarDrag(y) {
+      const scrollbar = getAchievementsScrollbarMetrics();
+      if (!scrollbar) return;
+      state.achievementsScrollbarDragActive = true;
+      state.achievementsDragMoved = false;
+      state.achievementsScrollbarGrabOffset = y - scrollbar.thumbY;
     }
 
     function updateAchievementsDrag(y) {
@@ -1721,8 +1938,24 @@
       state.achievementsScroll = Math.max(0, Math.min(metrics.maxScroll, (state.achievementsDragStartScroll || 0) - delta));
     }
 
+    function updateAchievementsScrollbarDrag(y) {
+      if (!state.achievementsScrollbarDragActive) return;
+      const scrollbar = getAchievementsScrollbarMetrics();
+      if (!scrollbar) return;
+      const movableTrack = scrollbar.trackH - scrollbar.thumbH;
+      if (movableTrack <= 0) {
+        state.achievementsScroll = 0;
+        return;
+      }
+      const thumbTop = Math.max(scrollbar.trackY, Math.min(scrollbar.trackY + movableTrack, y - (state.achievementsScrollbarGrabOffset || 0)));
+      const ratio = (thumbTop - scrollbar.trackY) / movableTrack;
+      state.achievementsDragMoved = true;
+      state.achievementsScroll = ratio * scrollbar.maxScroll;
+    }
+
     function endAchievementsDrag() {
       state.achievementsDragActive = false;
+      state.achievementsScrollbarDragActive = false;
     }
 
     function rebuildMapLayout() {
@@ -2470,11 +2703,13 @@
       drawTowerListIcon(tower.type, demo.tower.x, demo.tower.y, false, towerIconScale, demo.tower.angle);
       for (const enemy of demo.enemies) {
         drawEnemyPreviewIcon(enemy, enemy.x, enemy.y, 1);
-        const hpW = 18;
+        const hpRadius = getEnemyHitRadius(enemy);
+        const hpW = hpRadius * 2;
+        const hpY = enemy.y - hpRadius - 10;
         ctx.fillStyle = "rgba(8, 18, 28, 0.78)";
-        ctx.fillRect(enemy.x - hpW / 2, enemy.y - 15, hpW, 3.5);
+        ctx.fillRect(enemy.x - hpW / 2, hpY, hpW, 3.5);
         ctx.fillStyle = "#75e9a7";
-        ctx.fillRect(enemy.x - hpW / 2, enemy.y - 15, hpW * Math.max(0, enemy.hp / enemy.maxHp), 3.5);
+        ctx.fillRect(enemy.x - hpW / 2, hpY, hpW * Math.max(0, enemy.hp / enemy.maxHp), 3.5);
         if (enemy.slowTimer > 0) {
           ctx.strokeStyle = "rgba(170, 201, 255, 0.8)";
           ctx.lineWidth = 1.1 * invS;
@@ -4041,6 +4276,7 @@
         state.message = "Choose a map.";
         state.messageAt = Date.now();
         updateButtons();
+        syncMenuMusic();
         return;
       }
       if (id === "mapSelectBack") {
@@ -4048,6 +4284,7 @@
         state.message = "";
         state.messageAt = Date.now();
         updateButtons();
+        syncMenuMusic();
         return;
       }
       if (id.startsWith("mapStart:")) {
@@ -4057,6 +4294,7 @@
         state.message = "Set up quickly. First wave starts in 40s.";
         state.messageAt = Date.now();
         updateButtons();
+        syncMenuMusic();
         return;
       }
       if (id === "fullscreen") toggleFullscreen();
@@ -4166,6 +4404,7 @@
       state.screen = "start";
       state.message = "";
       state.messageAt = Date.now();
+      syncMenuMusic();
     }
 
     function continueAfterVictory() {
@@ -4182,6 +4421,7 @@
       state.message = "Continuing beyond wave 100.";
       state.messageAt = Date.now();
       updateButtons();
+      syncMenuMusic();
       startLoop();
       startWave(true);
     }
@@ -4254,6 +4494,13 @@
       }
       handleCanvasPress(p.x, p.y);
     }, { passive: false });
+
+    window.addEventListener("pointerdown", () => {
+      tryActivateMenuMusic();
+    }, { passive: true });
+    window.addEventListener("keydown", () => {
+      tryActivateMenuMusic();
+    });
 
     canvas.addEventListener("contextmenu", (evt) => {
       evt.preventDefault();
@@ -6412,7 +6659,9 @@
     const mouse = { x: W / 2, y: H / 2, screenX: W / 2, screenY: H / 2, inside: true };
     canvas.addEventListener("mousedown", (e) => {
       const p = worldPos(e);
-      if (state.menuMode === "achievements" && isPointInAchievementsList(p.x, p.y)) {
+      if (state.menuMode === "achievements" && isPointInAchievementsScrollbarThumb(p.x, p.y)) {
+        beginAchievementsScrollbarDrag(p.y);
+      } else if (state.menuMode === "achievements" && isPointInAchievementsList(p.x, p.y)) {
         beginAchievementsDrag(p.y);
       }
     });
@@ -6424,7 +6673,9 @@
       mouse.x = w.x;
       mouse.y = w.y;
       mouse.inside = w.inside;
-      if (state.achievementsDragActive) {
+      if (state.achievementsScrollbarDragActive) {
+        updateAchievementsScrollbarDrag(p.y);
+      } else if (state.achievementsDragActive) {
         updateAchievementsDrag(p.y);
       }
       if (state.aimingMeteor && !state.paused && w.inside) {
@@ -6445,7 +6696,9 @@
       mouse.x = w.x;
       mouse.y = w.y;
       mouse.inside = w.inside;
-      if (state.achievementsDragActive) {
+      if (state.achievementsScrollbarDragActive) {
+        updateAchievementsScrollbarDrag(p.y);
+      } else if (state.achievementsDragActive) {
         updateAchievementsDrag(p.y);
       }
       if (state.aimingMeteor && !state.paused && w.inside) {
@@ -6544,6 +6797,7 @@
       if (!isLoopRunning) return;
       const dt = Math.min(0.033, (t - lastTime) / 1000);
       lastTime = t;
+      syncMenuMusic();
       step(dt);
       render();
       rafId = requestAnimationFrame(frame);
